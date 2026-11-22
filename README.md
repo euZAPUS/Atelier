@@ -2,40 +2,55 @@
 
 Tu armario, en el bolsillo. PWA para el iPhone, local-first: haces una foto a una prenda, el fondo se quita en el propio dispositivo y queda guardada en menos de 10 segundos.
 
-> Estado: **Fase 0** — base del proyecto, PWA instalable, sistema de diseño y despliegue.
+> Estado: **Fase 1**: alta rápida de prendas y armario.
 
 ## Stack
 
 | Pieza | Para qué |
 |---|---|
 | Vite + React 19 + TypeScript | App |
+| Archivo (variable, con eje de anchura) | Titulares condensados y texto |
 | Tailwind CSS v4 | Estilos; los tokens viven en `src/index.css` |
 | vite-plugin-pwa (Workbox) | Service worker, manifest, uso sin conexión |
 | Dexie (IndexedDB) | Datos e imágenes en el dispositivo |
 | wouter | Rutas (~2 KB) |
 | i18n propio tipado | ES/EN; TypeScript avisa si falta una traducción |
 | Vitest + fake-indexeddb | Tests de la lógica |
-| @imgly/background-removal *(fase 1)* | Quitar el fondo en el dispositivo (AGPL-3.0) |
+| @imgly/background-removal + onnxruntime-web | Quitar el fondo en el dispositivo (ISNet; WebGPU o CPU) |
 
 ## Desarrollo
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 (también en la red local)
+npm run fetch-model  # una vez: descarga el modelo de recorte (~170 MB) a public/imgly/
+npm run dev          # http://localhost:5173 (también en la red local)
 npm test
 npm run build      # dist/ listo para subir
 npm run preview    # sirve dist/ con el service worker activo
 npm run icons      # regenera los PNG del icono desde public/favicon.svg
 ```
 
+## Alta rápida (fase 1)
+
+1. **+** abre la cámara directamente. A la vez empieza a cargarse el modelo, mientras encuadras.
+2. La foto aparece al instante con una línea de escaneo. El recorte (ISNet) se hace en el iPhone: con **WebGPU** usa `isnet_fp16` (88 MB) y, si no hay WebGPU, la **CPU** con `isnet_quint8` (44 MB).
+3. El color principal y la paleta salen de un **k-means en Lab** sobre los píxeles del recorte. Las luces y sombras de la misma tela se unen en un solo color.
+4. **Eliges la categoría y ya está guardada**, aunque el recorte no haya terminado: se completa en segundo plano. Si cierras la app a medias, se reanuda al abrirla.
+5. **Cronómetro**: va en directo en la pantalla y queda un historial en *Ajustes → Recorte de fondo*.
+
+También acepta fotos de la galería y recortes pegados: si copias una prenda con «Copiar sujeto» en Fotos, la app detecta la transparencia y se salta el modelo.
+
+El modelo se sirve desde la propia app, no desde el CDN de IMG.LY. No está en git: `npm run fetch-model` lo descarga del paquete oficial y copia solo lo que se usa. La primera vez se descarga una sola vez (unos 110 MB con WebGPU) y el service worker lo guarda para usarlo sin conexión.
+
 ## Estructura
 
 ```
 src/
   db/        esquema Dexie y tipos (Garment, Outfit, DayPlan, WearLog, Settings)
-  domain/    reglas puras: categorías, lavado (y más adelante color y recomendador)
+  domain/    reglas puras: categorías, lavado, color (k-means/Lab), nombres automáticos
+  features/  capture/ (cola de alta rápida), wardrobe/ (tarjetas)
   i18n/      es.ts (fuente) y en.ts
-  lib/       ajustes, almacenamiento persistente
+  lib/       ajustes, almacenamiento, imagen (canvas), recorte (imgly), navegación con transiciones
   ui/        sistema de diseño: Button, Chip, Icon, PageHeader, TabBar…
   pages/     pantallas
 public/      icono, .htaccess, boot.js (tema antes de pintar)
@@ -49,11 +64,22 @@ public/      icono, .htaccess, boot.js (tema antes de pintar)
 - **DayPlan**: la clave es la fecha `YYYY-MM-DD`.
 - **WearLog**: copia los ids de las prendas usadas ese día, para que las estadísticas no cambien si editas el outfit.
 
+Nombre automático con concordancia: «Sudadera negra», «Pantalón vaquero», «Black hoodie». Se recalcula si cambias el idioma, y uno puesto a mano tiene prioridad.
+
 Lavado por defecto: camisetas 1 · manga larga 2 · sudaderas 3 · pantalones 3 (vaqueros 4) · chaquetas 8 · calzado y accesorios nunca.
 
 ## Diseño
 
-Misma paleta que [alvaro.sangon.eu](https://alvaro.sangon.eu): tinta `#0c0d0f`/`#eeeeef`, acento ámbar `#ffae00`, Inter + SF Mono para las etiquetas `FIG. 0X`, papel milimetrado, láminas con marcas de corte y barra inferior de cristal líquido (heredada de Zapper AIO). El sistema completo se ve en la app: **Ajustes → Sistema de diseño**.
+Estética streetwear: blanco roto o negro, acento **lima ácido** `#c8ff00`, titulares en **Archivo** condensada y negra, y etiquetas tipo SKU en mono (`N.º 001`, códigos de barras).
+
+Animaciones:
+- cinta de texto en movimiento;
+- entrada escalonada de la cuadrícula;
+- transiciones entre pantallas con View Transitions; la foto de la tarjeta se transforma en la de la ficha;
+- escaneo mientras se recorta;
+- recorte que aparece como una pegatina con borde blanco.
+
+Todos los colores están definidos en `src/index.css`, así que cambiar de estética no obliga a tocar las pantallas. El sistema completo se ve en *Ajustes → Sistema de diseño*.
 
 ## Probarla
 
@@ -68,7 +94,7 @@ Abre http://localhost:5173. Con las herramientas de desarrollo en vista iPhone s
 
 **En el iPhone: GitHub Pages** → https://euzapus.github.io/Atelier/
 
-Cada push a `main` ejecuta `.github/workflows/pages.yml`: tests, build con `BASE_PATH=/Atelier/` y publicación en Pages. Antes hay que activarlo una vez en *Settings → Pages → Source: GitHub Actions*.
+Cada push a `main` ejecuta `.github/workflows/pages.yml`: tests, descarga del modelo, build con `BASE_PATH=/Atelier/` y publicación en Pages. Antes hay que activarlo una vez en *Settings → Pages → Source: GitHub Actions*.
 
 Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de inicio**. Ábrela desde el icono, no desde Safari: solo así iOS concede el almacenamiento persistente.
 
@@ -94,7 +120,7 @@ Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de ini
 ## Hoja de ruta
 
 - [x] **Fase 0**: base, PWA, sistema de diseño y GitHub Pages
-- [ ] **Fase 1**: alta rápida (cámara, recorte, color y categoría) y armario
+- [x] **Fase 1**: alta rápida (cámara, recorte, color y categoría), armario con filtros y ficha editable
 - [ ] **Fase 2**: estados limpia/usada/sucia y lavadora
 - [ ] **Fase 3**: outfits y collage 2D
 - [ ] **Fase 4**: calendario semanal y "Usado hoy"
