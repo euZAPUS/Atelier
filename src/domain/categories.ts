@@ -14,6 +14,8 @@ export type CategoryId = (typeof CATEGORIES)[number]['id']
 
 // Subcategorías sugeridas con su propio valor de lavado (la prenda puede sobrescribirlo igualmente).
 export const SUBCATEGORY_WASH: Record<string, number | null> = {
+  vaquero: 4,
+  vaqueros: 4,
   jeans: 4,
 }
 
