@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Route, Switch } from 'wouter'
+import { Route, Router, Switch } from 'wouter'
 import { useT } from './i18n'
 import { applyTheme, useSettings } from './lib/settings'
 import { Kit } from './pages/Kit'
@@ -24,6 +24,7 @@ export function App() {
   useEffect(() => { document.documentElement.lang = lang }, [lang])
 
   return (
+    <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
     <div className="mx-auto max-w-xl">
       <Switch>
         <Route path="/"><Wardrobe /></Route>
@@ -37,5 +38,6 @@ export function App() {
       <TabBar />
       <UpdatePrompt />
     </div>
+    </Router>
   )
 }

@@ -55,20 +55,35 @@ Lavado por defecto: camisetas 1 · manga larga 2 · sudaderas 3 · pantalones 3 
 
 Misma paleta que [alvaro.sangon.eu](https://alvaro.sangon.eu): tinta `#0c0d0f`/`#eeeeef`, acento ámbar `#ffae00`, Inter + SF Mono para las etiquetas `FIG. 0X`, papel milimetrado, láminas con marcas de corte y barra inferior de cristal líquido (heredada de Zapper AIO). El sistema completo se ve en la app: **Ajustes → Sistema de diseño**.
 
-## Despliegue (Nethosting)
+## Probarla
 
-Cada push a `main` ejecuta `.github/workflows/deploy.yml`: tests, build y subida por FTPS a la carpeta del subdominio.
+**En el PC:**
 
-1. En el panel de Nethosting, crea el subdominio `atelier.sangon.eu` y activa SSL (Let's Encrypt).
-2. Crea una cuenta FTP limitada a la carpeta de ese subdominio.
-3. En GitHub → *Settings → Secrets and variables → Actions*, añade `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` y `FTP_DIR` (carpeta del subdominio, acabada en `/`).
-4. Haz push a `main`, o lanza el workflow a mano desde *Actions*.
+```bash
+npm install
+npm run dev
+```
 
-`public/.htaccess` fuerza HTTPS, redirige las rutas a `index.html`, añade cabeceras de seguridad (CSP sin orígenes externos) y controla la caché: `index.html` y `sw.js` siempre se revalidan, y `/assets/` se cachea para siempre.
+Abre http://localhost:5173. Con las herramientas de desarrollo en vista iPhone se ve igual que en el móvil.
 
-## Instalar en el iPhone
+**En el iPhone: GitHub Pages** → https://euzapus.github.io/Atelier/
 
-Safari → `atelier.sangon.eu` → Compartir → **Añadir a pantalla de inicio**. Ábrela desde el icono, no desde Safari: solo así iOS concede el almacenamiento persistente.
+Cada push a `main` ejecuta `.github/workflows/pages.yml`: tests, build con `BASE_PATH=/Atelier/` y publicación en Pages. Antes hay que activarlo una vez en *Settings → Pages → Source: GitHub Actions*.
+
+Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de inicio**. Ábrela desde el icono, no desde Safari: solo así iOS concede el almacenamiento persistente.
+
+> Los datos se guardan por dominio: lo que metas en la versión de Pages no aparecerá cuando pases a `atelier.sangon.eu`. Para eso estará la copia de seguridad (fase 5).
+
+## Despliegue en tu dominio (más adelante)
+
+`.github/workflows/deploy.yml` (solo se lanza a mano) sube la build por FTPS a Nethosting:
+
+1. Crea el subdominio `atelier.sangon.eu` en el panel y activa SSL.
+2. Crea una cuenta FTP limitada a su carpeta.
+3. Añade los secretos `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` y `FTP_DIR` en GitHub.
+4. Lanza *Actions → Deploy Nethosting*.
+
+`public/.htaccess` fuerza HTTPS, redirige las rutas a `index.html`, añade cabeceras de seguridad (CSP sin orígenes externos) y controla la caché.
 
 ## Privacidad y seguridad
 
@@ -78,7 +93,7 @@ Safari → `atelier.sangon.eu` → Compartir → **Añadir a pantalla de inicio*
 
 ## Hoja de ruta
 
-- [x] **Fase 0**: base, PWA, sistema de diseño y despliegue
+- [x] **Fase 0**: base, PWA, sistema de diseño y GitHub Pages
 - [ ] **Fase 1**: alta rápida (cámara, recorte, color y categoría) y armario
 - [ ] **Fase 2**: estados limpia/usada/sucia y lavadora
 - [ ] **Fase 3**: outfits y collage 2D

@@ -10,7 +10,11 @@ const buildId = (() => {
   try { return execSync('git rev-parse --short HEAD').toString().trim() } catch { return 'dev' }
 })()
 
+// En GitHub Pages la app vive en /Atelier/; en local y en un subdominio, en /.
+const base = process.env.BASE_PATH ?? '/'
+
 export default defineConfig({
+  base,
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_ID__: JSON.stringify(buildId),
@@ -22,13 +26,13 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'boot.js'],
       manifest: {
-        id: '/',
+        id: base,
         name: 'Atelier',
         short_name: 'Atelier',
         description: 'Tu armario, en el bolsillo.',
         lang: 'es',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#09090a',
@@ -42,7 +46,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         globIgnores: ['**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*'],
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },
     }),

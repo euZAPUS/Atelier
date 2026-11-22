@@ -4,11 +4,10 @@
 #   FTP_USERNAME  la cuenta FTP del subdominio
 #   FTP_PASSWORD
 #   FTP_DIR       carpeta del subdominio, acabada en / (p. ej. /atelier.sangon.eu/)
-name: Deploy
+name: Deploy Nethosting
 
+# Desactivado de momento: solo se lanza a mano desde Actions cuando quieras usar tu dominio.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
