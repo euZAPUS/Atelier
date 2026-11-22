@@ -1,0 +1,150 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* =====================================================================
+   TOKENS — misma paleta que alvaro.sangon.eu (dibujo técnico, tinta + ámbar)
+   Todo el color sale de aquí. light-dark() elige según color-scheme.
+   ===================================================================== */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#e8eaee, #09090a);
+  --bg-soft: light-dark(#dde0e6, #101012);
+  --surface: light-dark(#f3f4f7, #151517);
+  --ink: light-dark(#0c0d0f, #eeeeef);
+  --ink-muted: light-dark(#555962, #8d8f96);
+  --line: light-dark(#0c0d0f, #eeeeef);
+  --line-soft: light-dark(#0c0d0f2b, #eeeeef24);
+  --grid: light-dark(#0c0d0f0d, #eeeeef0b);
+  --accent: #ffae00;
+  --accent-ink: #17130e;
+  --clean: light-dark(#2f8a5e, #6fd19b);
+  --worn: light-dark(#b07800, #ffcf5a);
+  --dirty: light-dark(#c4314b, #ff6b81);
+  --shadow-hard: 0 .6rem 1.8rem -.9rem light-dark(#0c0d0f59, #000000b3);
+
+  /* Liquid glass (barra inferior y hojas), heredado de Zapper AIO */
+  --glass-bg: light-dark(rgba(243,244,247,.62), rgba(21,21,23,.55));
+  --glass-border: light-dark(rgba(12,13,15,.12), rgba(255,255,255,.12));
+  --glass-shine: light-dark(rgba(255,255,255,.9), rgba(255,255,255,.22));
+  --glass-blur: blur(22px) saturate(1.6);
+
+  --font-body: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --tab-h: 4.25rem;
+}
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-clean: var(--clean);
+  --color-worn: var(--worn);
+  --color-dirty: var(--dirty);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+/* ---------- Base ---------- */
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+/* Papel milimetrado en una capa fija (iOS ignora background-attachment: fixed) */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+}
+::selection { background: var(--accent); color: var(--accent-ink); }
+button { cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Etiqueta técnica: FIG. 01 — ARMARIO */
+.fig {
+  font-family: var(--font-mono);
+  font-size: .6875rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* Lámina: tarjeta con marcas de corte en las esquinas */
+.plate {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+.plate::before, .plate::after {
+  content: ''; position: absolute; width: 10px; height: 10px; pointer-events: none;
+  border-color: var(--line); border-style: solid;
+}
+.plate::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.plate::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+
+/* Regla con marcas: separador de secciones */
+.ruler {
+  height: 8px;
+  background:
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px) 0 100% / 8px 4px repeat-x,
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px) 0 100% / 40px 8px repeat-x;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Cristal líquido */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-hard), inset 0 1px 0 var(--glass-shine);
+}
+
+/* Botón que se hunde al pulsar */
+.press { transition: transform .12s var(--ease-out), background-color .2s, color .2s, border-color .2s; }
+.press:active { transform: scale(.96); }
+
+/* ---------- Animaciones (rápidas) ---------- */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page-in { animation: page-in .22s var(--ease-out) both; }
+
+/* Trazo que se dibuja: para las ilustraciones técnicas */
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.draw path, .draw line, .draw circle, .draw rect, .draw polyline {
+  stroke-dasharray: 1; stroke-dashoffset: 1; /* con pathLength=1 en cada trazo */
+  animation: draw .9s var(--ease-out) forwards;
+}
+.draw > :nth-child(2) { animation-delay: .08s; }
+.draw > :nth-child(3) { animation-delay: .16s; }
+.draw > :nth-child(4) { animation-delay: .24s; }
+.draw > :nth-child(n+5) { animation-delay: .32s; }
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+.toast-in { animation: toast-in .25s var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+  .draw * { stroke-dashoffset: 0 !important; }
+}
+
+/* Zonas seguras del iPhone (Dynamic Island y barra de inicio) */
+.pt-safe { padding-top: max(env(safe-area-inset-top), 1rem); }
+.pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 2rem); }
