@@ -27,6 +27,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Modelo de recorte (~170 MB): no está en git, se descarga del paquete oficial de IMG.LY
+      - run: npm run fetch-model
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/

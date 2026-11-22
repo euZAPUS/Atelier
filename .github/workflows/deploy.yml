@@ -28,6 +28,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run fetch-model
       - run: npm run build
       - name: Subir por FTPS
         if: env.HAS_FTP == 'true'

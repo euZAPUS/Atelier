@@ -35,8 +35,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#09090a',
-        theme_color: '#09090a',
+        background_color: '#0a0a0a',
+        theme_color: '#0a0a0a',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -45,9 +45,20 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
-        globIgnores: ['**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*'],
+        globIgnores: ['imgly/**', '**/archivo-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*', '**/*-italic*'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+        // En la primera instalación toma el control ya, para que el modelo se guarde en su caché desde el primer uso
+        clientsClaim: true,
+        // El modelo de recorte (~110 MB) no va en el precache: se guarda la primera vez que se usa
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/imgly/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'imgly-model', expiration: { maxEntries: 120 } },
+          },
+        ],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
   ],
