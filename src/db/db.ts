@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { DayPlan, Garment, GarmentImage, Outfit, Settings, WearLog } from './types'
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 // Solo se indexan los campos por los que se filtra u ordena.
 export const db = new Dexie('atelier') as Dexie & {
@@ -20,6 +20,11 @@ db.version(1).stores({
   plans: 'date, outfitId',
   wearLog: 'id, date, *garmentIds',
   settings: 'id',
+})
+
+// v2: índice por imageId (para reanudar recortes a medias)
+db.version(2).stores({
+  garments: 'id, category, archived, createdAt, lastWornAt, wearsTotal, imageId',
 })
 
 export const newId = () => crypto.randomUUID()
