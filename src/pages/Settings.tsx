@@ -3,6 +3,7 @@ import { TLink } from '../lib/nav'
 import { fmt, useT } from '../i18n'
 import { updateSettings, useSettings } from '../lib/settings'
 import { formatBytes, requestPersist, storageInfo } from '../lib/storage'
+import { aiPing } from '../lib/ai'
 import { bgDevice, modelCached, onBgProgress, warmUp, type BgDevice } from '../lib/bg'
 import { Button } from '../ui/Button'
 import { Icon, type IconName } from '../ui/Icon'
@@ -49,6 +50,42 @@ function CutoutSection() {
   )
 }
 
+function AiSection() {
+  const t = useT()
+  const s = useSettings()
+  const ai = s.ai ?? { enabled: false, url: '' }
+  const [test, setTest] = useState<'ok' | 'auth' | 'unreachable' | 'testing' | null>(null)
+  const save = (patch: Partial<typeof ai>) => updateSettings({ ai: { ...ai, ...patch } })
+  const input = 'mt-1 w-full border-b-2 border-ink bg-transparent py-2 font-mono text-sm outline-none'
+  return (
+    <Section label={t.settings.ai}>
+      <div className="space-y-4 py-4">
+        <p className="text-sm leading-relaxed text-muted">{t.settings.aiBody}</p>
+        <label className="block">
+          <span className="tag text-muted">{t.settings.aiUrl}</span>
+          <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://atelier-ai.<tu-usuario>.workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
+            onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() })} className={input} />
+        </label>
+        <label className="block">
+          <span className="tag text-muted">{t.settings.aiKey}</span>
+          <input key={`k${ai.key}`} defaultValue={ai.key} type="password" autoCapitalize="off" autoCorrect="off"
+            onBlur={(e) => e.target.value !== (ai.key ?? '') && save({ key: e.target.value || undefined })} className={input} />
+        </label>
+        <div className="flex items-center gap-3">
+          <Button icon="bolt" disabled={!ai.url || test === 'testing'} onClick={async () => { setTest('testing'); setTest(await aiPing(ai.url, ai.key)) }}>{t.settings.aiTest}</Button>
+          {test && test !== 'testing' && (
+            <span className={`text-sm font-bold ${test === 'ok' ? 'text-clean' : 'text-dirty'}`}>
+              {test === 'ok' ? t.settings.aiOk : test === 'auth' ? t.settings.aiAuth : t.settings.aiUnreachable}
+            </span>
+          )}
+        </div>
+        <Segmented value={ai.enabled ? 'on' : 'off'} onChange={(v) => save({ enabled: v === 'on' })}
+          options={[{ id: 'off', label: 'Off' }, { id: 'on', label: t.settings.aiEnable }]} />
+      </div>
+    </Section>
+  )
+}
+
 function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { id: T; label: string; icon?: IconName }[]; onChange: (v: T) => void }) {
   return (
     <div className="flex rounded-full border-2 border-ink p-1">
@@ -88,6 +125,8 @@ export function Settings() {
             ]} />
           </div>
         </Section>
+
+        <AiSection />
 
         <CutoutSection />
 

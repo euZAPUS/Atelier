@@ -5,6 +5,7 @@ import { db, newId } from '../../db/db'
 import type { ColorInfo, Garment } from '../../db/types'
 import { categoryById, type CategoryId } from '../../domain/categories'
 import { extractPalette } from '../../domain/color'
+import { AiError, aiConfig, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
 import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
 
@@ -19,9 +20,13 @@ export interface Job {
   palette?: ColorInfo[]
   error?: string
   savedId?: string
+  phase?: 'ai' | 'cutout'
+  suggested?: CategoryId // categoría que propone la IA
+  aiFallback?: AiError['kind'] // la IA no se pudo usar y se recortó en el móvil
 }
 
-interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[] }
+interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[]; suggested?: CategoryId; aiFallback?: AiError['kind'] }
+type Phase = (p: { phase: 'ai' | 'cutout'; suggested?: CategoryId; aiFallback?: AiError['kind'] }) => void
 
 let job: Job | null = null
 let result: Promise<Result> | null = null
@@ -41,28 +46,56 @@ export function markTap() {
 
 export const PENDING_COLOR: ColorInfo = { hex: '#9a9a96', name: 'pending', lab: [63, 0, 1] }
 
-/** Procesa una foto: recorte, miniatura y color. */
-async function process(file: Blob): Promise<Result> {
+/** Recorte local (ISNet en el móvil) de una imagen. */
+async function cutLocal(src: HTMLCanvasElement) {
+  const work = toCanvas(src, 1024) // el modelo trabaja a 1024: más no mejora y tarda más
+  const png = await removeBackground(await canvasToBlob(work, 'image/jpeg', 0.9))
+  const cbmp = await decode(png)
+  const cc = toCanvas(cbmp, 1024)
+  cbmp.close()
+  return trimTransparent(cc)
+}
+
+/**
+ * Procesa una foto: recorte, miniatura y color.
+ * Con la IA activada, primero se genera una foto de producto (prenda estirada, de frente, fondo blanco)
+ * y el recorte local se hace sobre ella. Sin IA, sin conexión o sin cuota: recorte local de la foto tal cual.
+ */
+async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId): Promise<Result> {
   const bmp = await decode(file)
   const full = toCanvas(bmp, 1600)
   bmp.close()
   const original = await canvasToBlob(full, 'image/jpeg', 0.82)
   let cut: HTMLCanvasElement | null
+  let suggested: CategoryId | undefined
+  let aiFallback: AiError['kind'] | undefined
   if (hasTransparency(full)) {
     cut = trimTransparent(full) // ya viene recortada ("Copiar sujeto" de iOS)
+  } else if (await aiConfig()) {
+    onPhase({ phase: 'ai' })
+    try {
+      const ai = await productShot(await canvasToBlob(toCanvas(full, 1024), 'image/jpeg', 0.88), hint)
+      suggested = ai.category ?? undefined
+      onPhase({ phase: 'cutout', suggested })
+      const abmp = await decode(ai.image)
+      const aiCanvas = toCanvas(abmp, 1024)
+      abmp.close()
+      cut = await cutLocal(aiCanvas)
+    } catch (e) {
+      aiFallback = e instanceof AiError ? e.kind : 'failed'
+      console.warn('IA no disponible, recorte local:', e)
+      onPhase({ phase: 'cutout', aiFallback })
+      cut = await cutLocal(full)
+    }
   } else {
-    const work = toCanvas(full, 1024) // el modelo trabaja a 1024: más no mejora y tarda más
-    const png = await removeBackground(await canvasToBlob(work, 'image/jpeg', 0.9))
-    const cbmp = await decode(png)
-    const cc = toCanvas(cbmp, 1024)
-    cbmp.close()
-    cut = trimTransparent(cc)
+    onPhase({ phase: 'cutout' })
+    cut = await cutLocal(full)
   }
   if (!cut) throw new Error('No se encontró ninguna prenda en la foto')
   const cutout = await encodeAlpha(toCanvas(cut, 900))
   const thumb = await encodeAlpha(toCanvas(cut, 360), 0.8)
   const palette = extractPalette(samplePixels(cut))
-  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette }
+  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, aiFallback }
 }
 
 export function startCapture(file: Blob) {
@@ -74,10 +107,10 @@ export function startCapture(file: Blob) {
   jobFile = file
   emit()
   const mine = id
-  result = process(file)
+  result = process(file, (p) => { if (job?.id === mine) set(p) })
   result.then(async (r) => {
     if (job?.id !== mine) { await applyIfSaved(mine, r); return }
-    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette })
+    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, suggested: r.suggested, aiFallback: r.aiFallback })
     await applyIfSaved(mine, r)
   }).catch(async (e) => {
     console.error(e)
@@ -146,20 +179,23 @@ export function discard() {
   emit()
 }
 
-/** Reintenta el recorte de una prenda guardada (si falló o se cerró la app a medias). */
-export async function reprocess(garmentId: string) {
+/** Procesa de nuevo una prenda guardada desde su foto original (con IA si está activada). */
+export async function reprocess(garmentId: string): Promise<{ ok: boolean; aiFallback?: AiError['kind'] }> {
   const g = await db.garments.get(garmentId)
   const img = g && (await db.images.get(g.imageId))
   const source = img?.original
-  if (!g || !img || !source) return
+  if (!g || !img || !source) return { ok: false }
+  const before = img.status
   await db.images.update(img.id, { status: 'pending' })
   try {
-    const r = await process(source)
+    const r = await process(source, undefined, g.category)
     await db.images.put({ id: img.id, cutout: r.cutout, thumb: r.thumb, original: r.original, status: 'ready' })
     await db.garments.update(g.id, { color: r.color, palette: r.palette, updatedAt: Date.now() })
+    return { ok: true, aiFallback: r.aiFallback }
   } catch (e) {
     console.error(e)
-    await db.images.update(img.id, { status: 'failed' })
+    await db.images.update(img.id, { status: before === 'ready' ? 'ready' : 'failed' })
+    return { ok: false }
   }
 }
 

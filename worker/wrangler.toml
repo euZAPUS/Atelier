@@ -1,0 +1,16 @@
+# Función de servidor de Atelier en Cloudflare Workers (plan gratuito).
+# Workers AI se usa con el binding "AI": no hace falta ninguna clave de API.
+name = "atelier-ai"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[ai]
+binding = "AI"
+
+[vars]
+# Webs que pueden llamar a esta función (separadas por comas)
+ALLOWED_ORIGINS = "https://euzapus.github.io,http://localhost:5173,http://localhost:4173"
+
+# Opcional (recomendado): una contraseña para que nadie más gaste tu cuota diaria gratis.
+#   npx wrangler secret put ACCESS_KEY
+# y pon la misma en la app: Ajustes → IA.

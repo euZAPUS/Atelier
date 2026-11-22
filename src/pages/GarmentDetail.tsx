@@ -43,6 +43,7 @@ export function GarmentDetail({ id }: { id: string }) {
   const g = useLiveQuery(() => db.garments.get(id), [id], null)
   const { url, status, isCutout } = useImage(g?.imageId, 'cutout')
   const [retrying, setRetrying] = useState(false)
+  const aiOn = useSettings().ai?.enabled === true
 
   if (g === null) return null // cargando
   if (!g) return <div className="pt-safe px-4"><p className="display mt-10 text-5xl">{t.garment.notFound}</p></div>
@@ -89,12 +90,18 @@ export function GarmentDetail({ id }: { id: string }) {
           <span className="mb-1 size-10 shrink-0 rounded-full ring-2 ring-line-soft" style={{ background: g.color.hex }} />
         </div>
 
+        {aiOn && status === 'ready' && (
+          <Button variant="primary" icon="bolt" block disabled={retrying} className="mt-4"
+            onClick={async () => { setRetrying(true); const r = await reprocess(g.id); setRetrying(false); if (r.aiFallback) alert(t.capture.fallback[r.aiFallback]) }}>
+            {retrying ? t.garment.enhancing : t.garment.enhance}
+          </Button>
+        )}
         {(status === 'failed' || status === 'pending') && (
           <div className="mt-4 flex items-center justify-between gap-3 border-2 border-dirty p-3">
             <span className="text-sm font-bold">{status === 'failed' ? t.garment.cutFailed : t.wardrobe.processing}</span>
             <Button variant="ink" icon="refresh" disabled={retrying} className="min-h-11"
               onClick={async () => { setRetrying(true); await reprocess(g.id); setRetrying(false) }}>
-              {retrying ? t.garment.retrying : t.garment.retry}
+              {retrying ? t.garment.retrying : aiOn ? t.garment.enhance : t.garment.retry}
             </Button>
           </div>
         )}

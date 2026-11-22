@@ -80,4 +80,6 @@ export interface Settings {
   lang: 'es' | 'en'
   washDefaults: Partial<Record<CategoryId, number | null>>
   schemaVersion: number
+  /** Función de servidor propia (Cloudflare Workers AI) para fotos de producto. La clave es la tuya, no de un proveedor. */
+  ai?: { enabled: boolean; url: string; key?: string }
 }

@@ -55,7 +55,8 @@ function Stage({ job }: { job: Job }) {
   const t = useT()
   const progress = useBgProgress()
   const label =
-    job.status === 'ready' ? t.capture.ready
+    job.status === 'ready' ? (job.aiFallback ? t.capture.fallback[job.aiFallback] : t.capture.ready)
+      : job.phase === 'ai' ? t.capture.aiWorking
       : job.status === 'failed' ? t.capture.failed
       : progress?.phase === 'download' && progress.ratio < 1 ? `${t.capture.downloading} · ${Math.round(progress.ratio * 100)}%`
       : t.capture.removing
@@ -99,7 +100,7 @@ const ICON: Record<CategoryId, IconName> = {
   tshirts: 'tshirt', longsleeves: 'longsleeve', hoodies: 'hoodie', jackets: 'jacket', trousers: 'trousers', footwear: 'shoe', accessories: 'cap',
 }
 
-function Categories({ onPick }: { onPick: (c: CategoryId) => void }) {
+function Categories({ onPick, suggested }: { onPick: (c: CategoryId) => void; suggested?: CategoryId }) {
   const t = useT()
   return (
     <div className="mx-4 mt-4">
@@ -107,9 +108,10 @@ function Categories({ onPick }: { onPick: (c: CategoryId) => void }) {
       <div className="grid grid-cols-2 gap-2">
         {CATEGORIES.map((c, i) => (
           <button key={c.id} onClick={() => onPick(c.id)} style={{ ['--i' as string]: i }}
-            className={`rise press flex min-h-16 items-center gap-3 border-2 border-ink bg-surface px-4 text-left font-extrabold uppercase active:bg-accent ${i === CATEGORIES.length - 1 ? 'col-span-2' : ''}`}>
+            className={`rise press relative flex min-h-16 items-center gap-3 border-2 border-ink px-4 text-left font-extrabold uppercase active:bg-accent ${suggested === c.id ? 'bg-accent text-accent-ink' : 'bg-surface'} ${i === CATEGORIES.length - 1 ? 'col-span-2' : ''}`}>
             <Icon name={ICON[c.id]} size={26} strokeWidth={1.7} />
             <span className="text-[0.95rem] leading-tight">{t.categories[c.id]}</span>
+            {suggested === c.id && <span className="tag absolute top-1.5 right-2 bg-ink px-1 text-bg">{t.capture.suggested}</span>}
           </button>
         ))}
       </div>
@@ -164,7 +166,7 @@ export function Capture() {
         <div className="page-in pb-6">
           <Stage job={job} />
           <ColorRow job={job} value={color} onChange={setColor} />
-          <Categories onPick={pick} />
+          <Categories onPick={pick} suggested={job.suggested} />
         </div>
       )}
     </div>

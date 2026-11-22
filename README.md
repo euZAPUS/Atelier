@@ -30,13 +30,24 @@ npm run preview    # sirve dist/ con el service worker activo
 npm run icons      # regenera los PNG del icono desde public/favicon.svg
 ```
 
+## Foto de producto con IA (opcional y gratis)
+
+Con una foto hecha de cualquier manera (jersey doblado en la cama, con las crocs al lado…), el recorte local no basta: recorta lo que más destaca y deja la prenda tal como estaba. Por eso hay una **función de servidor propia** en `worker/`, en Cloudflare Workers AI con el plan gratuito (unas 75 prendas al día, sin tarjeta y sin claves de API):
+
+1. Un modelo de visión identifica la prenda principal y su categoría, que aparece resaltada al elegir.
+2. FLUX.2 [klein] genera esa prenda **estirada, de frente y sobre fondo blanco**.
+3. El móvil recorta ese fondo blanco y saca el color.
+
+Sin conexión, sin cuota o sin configurar, la app recorta en el móvil como siempre. Las prendas ya guardadas tienen el botón **Mejorar con IA**, que parte de la foto original guardada. Instalación en [`worker/README.md`](worker/README.md).
+
+> La IA genera una imagen nueva a partir de tu foto: puede simplificar o inventar detalles como logos o texturas. Siempre se guarda tu foto original.
+
 ## Alta rápida (fase 1)
 
 1. **+** abre la cámara directamente. A la vez empieza a cargarse el modelo, mientras encuadras.
 2. La foto aparece al instante con una línea de escaneo. El recorte (ISNet) se hace en el iPhone: con **WebGPU** usa `isnet_fp16` (88 MB) y, si no hay WebGPU, la **CPU** con `isnet_quint8` (44 MB).
 3. El color principal y la paleta salen de un **k-means en Lab** sobre los píxeles del recorte. Las luces y sombras de la misma tela se unen en un solo color.
 4. **Eliges la categoría y ya está guardada**, aunque el recorte no haya terminado: se completa en segundo plano. Si cierras la app a medias, se reanuda al abrirla.
-5. **Cronómetro**: va en directo en la pantalla y queda un historial en *Ajustes → Recorte de fondo*.
 
 También acepta fotos de la galería y recortes pegados: si copias una prenda con «Copiar sujeto» en Fotos, la app detecta la transparencia y se salta el modelo.
 

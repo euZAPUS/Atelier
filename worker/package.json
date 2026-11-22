@@ -1,0 +1,16 @@
+{
+  "name": "atelier-ai",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261121.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.166.0"
+  }
+}
