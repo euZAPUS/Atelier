@@ -2,6 +2,9 @@ import { useEffect } from 'react'
 import { Route, Router, Switch } from 'wouter'
 import { useT } from './i18n'
 import { applyTheme, useSettings } from './lib/settings'
+import { resumePending } from './features/capture/store'
+import { Capture } from './pages/Capture'
+import { GarmentDetail } from './pages/GarmentDetail'
 import { Kit } from './pages/Kit'
 import { Placeholder } from './pages/Placeholder'
 import { Settings } from './pages/Settings'
@@ -22,15 +25,20 @@ export function App() {
     return () => mq.removeEventListener('change', on)
   }, [theme])
   useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // Prendas guardadas mientras el recorte seguía en marcha y la app se cerró
+  useEffect(() => { resumePending() }, [])
 
   return (
     <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
     <div className="mx-auto max-w-xl">
+      {/* Franja bajo la barra de estado: el contenido pasa por debajo sin chocar con la hora */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-50 bg-bg/85 backdrop-blur-xl" style={{ height: 'env(safe-area-inset-top)' }} />
       <Switch>
         <Route path="/"><Wardrobe /></Route>
-        <Route path="/nueva"><Placeholder fig="01.N" title={t.add.title} body={t.add.soon} icon="camera" /></Route>
-        <Route path="/outfits"><Placeholder fig="02" title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
-        <Route path="/semana"><Placeholder fig="03" title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
+        <Route path="/nueva"><Capture /></Route>
+        <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
+        <Route path="/outfits"><Placeholder code="03 / OUTFITS" title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
+        <Route path="/semana"><Placeholder code="04 / WEEK" title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
         <Route path="/ajustes"><Settings /></Route>
         <Route path="/kit"><Kit /></Route>
         <Route><Wardrobe /></Route>

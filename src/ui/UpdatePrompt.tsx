@@ -15,9 +15,9 @@ export function UpdatePrompt() {
   if (!needRefresh && !offlineReady) return null
   return (
     <div className="fixed inset-x-0 z-50 px-4" style={{ bottom: 'calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px)' }}>
-      <div className="glass toast-in mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl py-2 pr-2 pl-4">
-        <span className="text-sm font-medium">{needRefresh ? t.update.ready : t.update.offline}</span>
-        {needRefresh && <Button variant="primary" className="min-h-10 rounded-xl text-sm" onClick={() => updateServiceWorker(true)}>{t.update.reload}</Button>}
+      <div className="toast-in mx-auto flex max-w-md items-center justify-between gap-3 rounded-full bg-ink py-2 pr-2 pl-5 text-bg shadow-xl">
+        <span className="text-sm font-bold uppercase">{needRefresh ? t.update.ready : t.update.offline}</span>
+        {needRefresh && <Button variant="primary" className="min-h-10 rounded-full text-sm" onClick={() => updateServiceWorker(true)}>{t.update.reload}</Button>}
       </div>
     </div>
   )

@@ -1,18 +1,21 @@
 import type { ReactNode } from 'react'
+import { Barcode } from './Barcode'
 
-// Cabecera de lámina: número de figura, título grande y regla.
-export function PageHeader({ fig, title, meta, action }: { fig: string; title: string; meta?: string; action?: ReactNode }) {
+// Cabecera: código de sección, titular gigante condensado y acción opcional.
+export function PageHeader({ code, title, meta, action }: { code: string; title: string; meta?: string; action?: ReactNode }) {
   return (
-    <header className="pt-safe px-5 pb-4">
+    <header className="pt-safe px-4 pb-3">
       <div className="flex items-center justify-between">
-        <span className="fig">FIG. {fig} — {title}</span>
-        {meta && <span className="fig">{meta}</span>}
+        <span className="tag text-muted">{code}</span>
+        <div className="flex items-center gap-2">
+          {meta && <span className="tag text-muted">{meta}</span>}
+          <Barcode value={title} className="h-4 w-14 text-ink" />
+        </div>
       </div>
-      <div className="mt-3 flex items-end justify-between gap-4">
-        <h1 className="text-[2.6rem] leading-[.95] font-semibold tracking-[-0.04em]">{title}</h1>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <h1 className="display slam text-[clamp(3.6rem,19vw,6rem)]">{title}</h1>
         {action}
       </div>
-      <div className="ruler mt-4" />
     </header>
   )
 }
