@@ -4,30 +4,12 @@ import { CATEGORIES, type CategoryId } from '../domain/categories'
 import { colorLabel } from '../domain/naming'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { discard, saveJob, startCapture, useJob, type Job } from '../features/capture/store'
-import { fmt, useT } from '../i18n'
+import { useT } from '../i18n'
 import { onBgProgress, type BgProgress } from '../lib/bg'
-import { secs } from '../lib/metrics'
 import { useNav } from '../lib/nav'
 import { useSettings } from '../lib/settings'
 import { buttonBase, buttonStyles } from '../ui/Button'
 import { Icon, type IconName } from '../ui/Icon'
-
-// Cronómetro en vivo desde que pulsaste "+": el objetivo son 10 segundos.
-function Stopwatch({ job }: { job: Job }) {
-  const [now, setNow] = useState(performance.now())
-  useEffect(() => {
-    if (job.tSaved) return
-    const id = setInterval(() => setNow(performance.now()), 100)
-    return () => clearInterval(id)
-  }, [job.tSaved])
-  const ms = (job.tSaved ?? now) - job.t0
-  const over = ms > 10_000
-  return (
-    <span className={`font-mono text-sm font-bold tabular-nums ${over ? 'text-dirty' : ''}`}>
-      {secs(ms)}<span className="opacity-50"> / 10,0 s</span>
-    </span>
-  )
-}
 
 function useBgProgress() {
   const [p, setP] = useState<BgProgress | null>(null)
@@ -144,7 +126,6 @@ function Saved({ job }: { job: Job }) {
         <span className="display slam pointer-events-none absolute inset-x-0 top-6 text-center text-[clamp(4.5rem,25vw,8rem)] text-accent-ink">{t.capture.saved}</span>
         <img src={job.cutoutUrl ?? job.previewUrl} alt=""
           className={`pop relative max-h-[38vh] w-3/4 object-contain ${job.cutoutUrl ? 'sticker' : 'border-4 border-white'}`} style={{ animationDelay: '.12s' }} />
-        <span className="display-wide absolute bottom-4 text-2xl text-accent-ink">{fmt(t.capture.savedIn, { s: secs(job.tSaved! - job.t0) })}</span>
       </div>
       {job.status === 'processing' && <p className="tag mt-2 text-muted">{t.capture.background}</p>}
       <div className="grid grid-cols-2 gap-2 py-4">
@@ -177,7 +158,7 @@ export function Capture() {
       <header className="pt-safe flex items-center justify-between px-2 pb-2">
         <button onClick={close} aria-label={t.capture.cancel} className="press grid size-12 place-items-center"><Icon name="close" size={26} strokeWidth={2} /></button>
         <span className="tag text-muted">02 / NEW</span>
-        <div className="grid min-w-12 place-items-center px-2">{job && <Stopwatch job={job} />}</div>
+        <span className="w-12" />
       </header>
       {!job ? <Intro /> : job.savedId ? <Saved job={job} /> : (
         <div className="page-in pb-6">

@@ -26,7 +26,7 @@ export const en: Dict = {
     downloading: 'Downloading model · first time only', removing: 'Removing background', ready: 'Ready',
     failed: 'Could not cut it out. It will be saved with the photo and you can retry later.',
     pickCategory: 'Pick a category and done', color: 'Colour',
-    saved: 'In', savedIn: 'in {s} s', another: 'Another', viewWardrobe: 'View closet',
+    saved: 'In', another: 'Another', viewWardrobe: 'View closet',
     background: 'The cutout will finish in the background', cancel: 'Discard',
   },
   garment: {
@@ -48,8 +48,6 @@ export const en: Dict = {
     requestPersist: 'Request persistent storage', used: '{used} used',
     cutout: 'Background removal', engine: 'Engine', modelReady: 'Model downloaded · works offline',
     modelMissing: 'Model not downloaded ({size})', download: 'Download now', downloading: 'Downloading… {p}%',
-    timings: 'Add-item stopwatch', timingsEmpty: 'Add an item and you will see how long it took.',
-    avg: 'Average', target: 'Target: under 10 s', firstRun: '1st run', cameraCol: 'Camera', totalCol: 'Total', cutCol: 'Cutout',
     about: 'About', version: 'Version', designKit: 'Design system', license: 'Open source · AGPL-3.0',
   },
   update: { ready: 'A new version is available', reload: 'Update', offline: 'Ready to work offline' },

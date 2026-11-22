@@ -24,7 +24,7 @@ export const es = {
     downloading: 'Descargando modelo · solo la primera vez', removing: 'Quitando el fondo', ready: 'Listo',
     failed: 'No he podido recortarla. Se guardará con la foto y podrás reintentarlo.',
     pickCategory: 'Elige categoría y listo', color: 'Color',
-    saved: 'Dentro', savedIn: 'en {s} s', another: 'Otra', viewWardrobe: 'Ver armario',
+    saved: 'Dentro', another: 'Otra', viewWardrobe: 'Ver armario',
     background: 'El recorte acabará en segundo plano', cancel: 'Descartar',
   },
   garment: {
@@ -46,8 +46,6 @@ export const es = {
     requestPersist: 'Pedir almacenamiento persistente', used: '{used} usados',
     cutout: 'Recorte de fondo', engine: 'Motor', modelReady: 'Modelo descargado · funciona sin conexión',
     modelMissing: 'Modelo sin descargar ({size})', download: 'Descargar ahora', downloading: 'Descargando… {p}%',
-    timings: 'Cronómetro del alta', timingsEmpty: 'Añade una prenda y aquí verás cuánto has tardado.',
-    avg: 'Media', target: 'Objetivo: menos de 10 s', firstRun: '1.ª vez', cameraCol: 'Cámara', totalCol: 'Total', cutCol: 'Recorte',
     about: 'Acerca de', version: 'Versión', designKit: 'Sistema de diseño', license: 'Código abierto · AGPL-3.0',
   },
   update: { ready: 'Hay una versión nueva', reload: 'Actualizar', offline: 'Lista para usar sin conexión' },

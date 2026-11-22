@@ -5,9 +5,8 @@ import { db, newId } from '../../db/db'
 import type { ColorInfo, Garment } from '../../db/types'
 import { categoryById, type CategoryId } from '../../domain/categories'
 import { extractPalette } from '../../domain/color'
-import { bgDevice, removeBackground, warmUp } from '../../lib/bg'
+import { removeBackground, warmUp } from '../../lib/bg'
 import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
-import { saveTiming } from '../../lib/metrics'
 
 export type JobStatus = 'processing' | 'ready' | 'failed'
 
@@ -20,11 +19,6 @@ export interface Job {
   palette?: ColorInfo[]
   error?: string
   savedId?: string
-  t0: number // al pulsar "+"
-  tPicked: number // al tener la foto
-  tSaved?: number
-  tReady?: number
-  firstRun: boolean
 }
 
 interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[] }
@@ -40,13 +34,9 @@ export function useJob() {
   return useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f) } }, () => job)
 }
 
-// Momento en que se pulsó "+" (antes de que se abra la cámara)
-let tTap = 0
-let modelWasWarm = false
+/** Al pulsar "+": mientras se abre la cámara y encuadras, se prepara el modelo. */
 export function markTap() {
-  tTap = performance.now()
-  // Mientras eliges el encuadre, se prepara el modelo
-  warmUp().then(() => { modelWasWarm = true }).catch(() => {})
+  warmUp().catch(() => {})
 }
 
 export const PENDING_COLOR: ColorInfo = { hex: '#9a9a96', name: 'pending', lab: [63, 0, 1] }
@@ -77,24 +67,21 @@ async function process(file: Blob): Promise<Result> {
 
 export function startCapture(file: Blob) {
   discard()
-  const tPicked = performance.now()
   const id = newId()
   job = {
     id, status: 'processing', previewUrl: URL.createObjectURL(file),
-    t0: tTap && tPicked - tTap < 120_000 ? tTap : tPicked, tPicked, firstRun: !modelWasWarm,
   }
-  tTap = 0
   jobFile = file
   emit()
   const mine = id
   result = process(file)
   result.then(async (r) => {
     if (job?.id !== mine) { await applyIfSaved(mine, r); return }
-    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, tReady: performance.now() })
+    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette })
     await applyIfSaved(mine, r)
   }).catch(async (e) => {
     console.error(e)
-    if (job?.id === mine) set({ status: 'failed', error: String(e?.message ?? e), tReady: performance.now() })
+    if (job?.id === mine) set({ status: 'failed', error: String(e?.message ?? e) })
     await markFailed(mine, file)
   })
 }
@@ -111,7 +98,6 @@ async function applyIfSaved(jobId: string, r: Result) {
     await db.images.put({ id: g.imageId, cutout: r.cutout, thumb: r.thumb, original: r.original, status: 'ready' })
     if (g.color.name === 'pending') await db.garments.update(gid, { color: r.color, palette: r.palette, updatedAt: Date.now() })
   })
-  finishTiming(jobId)
 }
 async function markFailed(jobId: string, file: Blob) {
   const gid = savedJobs.get(jobId)
@@ -124,17 +110,6 @@ async function markFailed(jobId: string, file: Blob) {
   const palette = extractPalette(samplePixels(centerCrop(c)))
   await db.images.put({ id: g.imageId, cutout: null, thumb: await canvasToBlob(toCanvas(c, 360), 'image/jpeg', 0.8), original: await canvasToBlob(c, 'image/jpeg', 0.82), status: 'failed' })
   await db.garments.update(gid, { color: palette[0] ?? PENDING_COLOR, palette, updatedAt: Date.now() })
-}
-
-const timings = new Map<string, Job>()
-function finishTiming(jobId: string) {
-  const j = timings.get(jobId)
-  if (!j?.tSaved) return
-  timings.delete(jobId)
-  bgDevice().then((device) => saveTiming({
-    at: Date.now(), camera: j.tPicked - j.t0, toSave: j.tSaved! - j.t0,
-    cutout: (j.tReady ?? performance.now()) - j.tPicked, device, firstRun: j.firstRun,
-  }))
 }
 
 /** Guarda la prenda con la categoría elegida. No espera al recorte. */
@@ -158,12 +133,9 @@ export async function saveJob(category: CategoryId, color?: ColorInfo): Promise<
     await db.images.put(r ? { id: imageId, cutout: r.cutout, thumb: r.thumb, original: r.original, status: 'ready' } : { id: imageId, cutout: null, thumb, original: file, status: 'pending' })
     await db.garments.add(garment)
   })
-  const tSaved = performance.now()
-  set({ savedId: gid, tSaved })
-  timings.set(j.id, { ...j, tSaved })
-  if (ready) finishTiming(j.id)
-  else if (j.status === 'failed') { savedJobs.set(j.id, gid); timings.delete(j.id); await markFailed(j.id, file) }
-  else savedJobs.set(j.id, gid)
+  set({ savedId: gid })
+  if (j.status === 'failed') { savedJobs.set(j.id, gid); await markFailed(j.id, file) }
+  else if (!ready) savedJobs.set(j.id, gid)
   return gid
 }
 

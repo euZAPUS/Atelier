@@ -4,7 +4,6 @@ import { fmt, useT } from '../i18n'
 import { updateSettings, useSettings } from '../lib/settings'
 import { formatBytes, requestPersist, storageInfo } from '../lib/storage'
 import { bgDevice, modelCached, onBgProgress, warmUp, type BgDevice } from '../lib/bg'
-import { loadTimings, secs } from '../lib/metrics'
 import { Button } from '../ui/Button'
 import { Icon, type IconName } from '../ui/Icon'
 import { PageHeader } from '../ui/PageHeader'
@@ -23,14 +22,12 @@ function CutoutSection() {
   const [device, setDevice] = useState<BgDevice>()
   const [model, setModel] = useState<{ cached: boolean; bytes: number }>()
   const [progress, setProgress] = useState<number | null>(null)
-  const timings = loadTimings()
   useEffect(() => { bgDevice().then(setDevice); modelCached().then(setModel) }, [])
   useEffect(() => onBgProgress((p) => p.phase === 'download' && setProgress(p.ratio)), [])
   const download = async () => {
     setProgress(0)
     try { await warmUp() } finally { setProgress(null); setModel(await modelCached()) }
   }
-  const avg = timings.length ? timings.reduce((a, x) => a + x.toSave, 0) / timings.length : 0
   return (
     <Section label={t.settings.cutout}>
       <div className="space-y-3 py-4">
@@ -46,32 +43,6 @@ function CutoutSection() {
           <Button block icon="bolt" disabled={progress !== null} onClick={download}>
             {progress !== null ? fmt(t.settings.downloading, { p: Math.round(progress * 100) }) : t.settings.download}
           </Button>
-        )}
-      </div>
-      <div className="py-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-bold uppercase">{t.settings.timings}</span>
-          {timings.length > 0 && <span className={`display text-3xl ${avg > 10000 ? 'text-dirty' : ''}`}>{t.settings.avg} {secs(avg)} s</span>}
-        </div>
-        <p className="tag mt-1 text-muted">{t.settings.target}</p>
-        {timings.length === 0 ? <p className="mt-3 text-sm text-muted">{t.settings.timingsEmpty}</p> : (
-          <table className="mt-3 w-full font-mono text-xs tabular-nums">
-            <thead className="text-muted"><tr className="text-left">
-              <th className="py-1 font-normal">#</th><th className="font-normal">{t.settings.cameraCol}</th>
-              <th className="font-normal">{t.settings.totalCol}</th><th className="font-normal">{t.settings.cutCol}</th><th />
-            </tr></thead>
-            <tbody>
-              {timings.slice(0, 10).map((x, i) => (
-                <tr key={x.at} className="border-t border-line-soft">
-                  <td className="py-1.5 text-muted">{timings.length - i}</td>
-                  <td>{secs(x.camera)} s</td>
-                  <td className={`font-bold ${x.toSave > 10000 ? 'text-dirty' : ''}`}>{secs(x.toSave)} s</td>
-                  <td>{secs(x.cutout)} s · {x.device}</td>
-                  <td className="text-right text-muted">{x.firstRun ? t.settings.firstRun : ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
       </div>
     </Section>
