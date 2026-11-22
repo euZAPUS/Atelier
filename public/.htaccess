@@ -1,0 +1,37 @@
+# Atelier — configuración para LiteSpeed/Apache (hosting compartido)
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Siempre HTTPS (necesario para service worker, cámara y almacenamiento)
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  # SPA: cualquier ruta que no sea un fichero va a index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+AddType application/manifest+json .webmanifest
+AddType application/wasm .wasm
+AddType application/octet-stream .onnx
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-Frame-Options "DENY"
+  Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  # Sin servidores externos: todo sale de este origen. blob:/data: para las fotos.
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' blob: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+
+  # Lo que cambia en cada versión: siempre se revalida
+  <FilesMatch "^(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest|boot\.js)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # Ficheros con hash en el nombre: caché para siempre
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+</IfModule>
