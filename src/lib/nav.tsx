@@ -2,7 +2,8 @@ import type { AnchorHTMLAttributes, MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation } from 'wouter'
 
-type VTDocument = Document & { startViewTransition?: (cb: () => void) => unknown }
+type VT = { ready: Promise<void>; finished: Promise<void> }
+type VTDocument = Document & { startViewTransition?: (cb: () => void) => VT }
 
 /** Navega con View Transitions (Safari 18+); si no hay soporte, navega sin más. */
 export function useNav() {
@@ -10,7 +11,9 @@ export function useNav() {
   return (to: string, opts?: { replace?: boolean }) => {
     const doc = document as VTDocument
     if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return navigate(to, opts)
-    doc.startViewTransition(() => flushSync(() => navigate(to, opts)))
+    const vt = doc.startViewTransition(() => flushSync(() => navigate(to, opts)))
+    // Si iOS cambia el viewport a mitad (al volver de la cámara) la animación se cancela: la navegación sigue igual
+    vt.ready.catch(() => {}); vt.finished.catch(() => {})
   }
 }
 

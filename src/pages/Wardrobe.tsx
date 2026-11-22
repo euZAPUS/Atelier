@@ -14,6 +14,7 @@ import { buttonBase, buttonStyles } from '../ui/Button'
 import { Chip } from '../ui/Chip'
 import { Icon } from '../ui/Icon'
 import { Marquee } from '../ui/Marquee'
+import { LiquidGlass } from '../ui/LiquidGlass'
 import { PageHeader } from '../ui/PageHeader'
 
 export function Wardrobe() {
@@ -63,14 +64,15 @@ export function Wardrobe() {
         </section>
       ) : (
         <>
-          <div className="sticky z-30 space-y-2 bg-bg/85 py-3 backdrop-blur-xl" style={{ top: 'env(safe-area-inset-top)' }}>
-            <div className="no-scrollbar flex gap-2 overflow-x-auto px-4">
+          <div className="sticky z-30 px-2 py-2" style={{ top: 'env(safe-area-inset-top)' }}>
+          <LiquidGlass borderRadius={26} className="space-y-2 overflow-hidden py-2.5">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto px-2.5">
               <Chip active={!cat} onClick={() => setCat(null)} count={garments.length}>{t.wardrobe.all}</Chip>
               {CATEGORIES.filter((c) => byCat.has(c.id)).map((c) => (
                 <Chip key={c.id} active={cat === c.id} onClick={() => setCat(cat === c.id ? null : c.id)} count={byCat.get(c.id)}>{t.categories[c.id]}</Chip>
               ))}
             </div>
-            <div className="no-scrollbar flex gap-2 overflow-x-auto px-4">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto px-2.5">
               {(['clean', 'worn', 'dirty'] as const).map((s) => (
                 <Chip key={s} active={status === s} onClick={() => setStatus(status === s ? null : s)}>{t.statusPlural[s]}</Chip>
               ))}
@@ -80,6 +82,7 @@ export function Wardrobe() {
                   swatch={NAMED_COLORS.find((x) => x.id === c)?.hex}>{colorLabel(c, lang)}</Chip>
               ))}
             </div>
+          </LiquidGlass>
           </div>
           {shown.length ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 px-4 pt-2">

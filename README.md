@@ -79,6 +79,11 @@ Animaciones:
 - escaneo mientras se recorta;
 - recorte que aparece como una pegatina con borde blanco.
 
+**Liquid Glass** (`src/ui/LiquidGlass.tsx`), solo en controles flotantes: barra inferior, barra de filtros, botón de volver y avisos. El contenido va siempre sobre fondo sólido.
+- En Chromium, un filtro SVG con `feDisplacementMap` refracta lo que pasa por debajo cerca de los bordes. El mapa se genera una vez por tamaño y como máximo hay 4 elementos con refracción a la vez.
+- Safari (también iOS) y Firefox no aplican filtros SVG en `backdrop-filter`, así que usan `blur(12px) saturate(160%)`.
+- En todos los navegadores lleva borde especular y brillo superior.
+
 Todos los colores están definidos en `src/index.css`, así que cambiar de estética no obliga a tocar las pantallas. El sistema completo se ve en *Ajustes → Sistema de diseño*.
 
 ## Probarla

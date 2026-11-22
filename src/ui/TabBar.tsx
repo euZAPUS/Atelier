@@ -3,6 +3,7 @@ import { CaptureInput } from '../features/capture/CaptureInput'
 import { useT } from '../i18n'
 import { TLink } from '../lib/nav'
 import { Icon, type IconName } from './Icon'
+import { LiquidGlass } from './LiquidGlass'
 
 // Barra negra flotante. El botón central abre la cámara al instante: es la acción principal.
 export function TabBar() {
@@ -29,14 +30,14 @@ export function TabBar() {
   }
   return (
     <nav className="tabbar fixed inset-x-0 bottom-0 z-40 px-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-      <div className="mx-auto flex h-(--tab-h) max-w-md items-center rounded-full px-2 shadow-[0_14px_40px_-12px_rgb(0_0_0/.6)]" style={{ background: 'var(--bar-bg)' }}>
+      <LiquidGlass tint="dark" borderRadius={32} className="mx-auto flex h-(--tab-h) max-w-md items-center px-2">
         {tabs.slice(0, 2).map(item)}
         <CaptureInput ariaLabel={t.nav.add}
           className="press mx-1 grid size-[3.6rem] shrink-0 place-items-center rounded-full bg-accent text-accent-ink shadow-[0_0_0_4px_var(--bg),0_8px_24px_-6px_rgb(200_255_0/.7)] -translate-y-4">
           <Icon name="plus" size={30} strokeWidth={2.4} />
         </CaptureInput>
         {tabs.slice(2).map(item)}
-      </div>
+      </LiquidGlass>
     </nav>
   )
 }

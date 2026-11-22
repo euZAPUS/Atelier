@@ -13,6 +13,7 @@ import { useImage } from '../lib/useImage'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
 import { Icon } from '../ui/Icon'
+import { LiquidGlass } from '../ui/LiquidGlass'
 import { StatusBadge } from '../ui/StatusBadge'
 
 const update = (id: string, patch: Partial<Garment>) => db.garments.update(id, { ...patch, updatedAt: Date.now() })
@@ -68,8 +69,10 @@ export function GarmentDetail({ id }: { id: string }) {
     <div className="pb-tab">
       <div className="relative bg-tile">
         <div className="pt-safe absolute inset-x-0 top-0 z-10 flex items-center justify-between px-2">
-          <button onClick={() => history.length > 1 ? history.back() : go('/')} aria-label={t.common.back}
-            className="press grid size-12 place-items-center rounded-full bg-surface/80 backdrop-blur"><Icon name="back" size={24} strokeWidth={2} /></button>
+          <LiquidGlass borderRadius={24} className="press">
+            <button onClick={() => history.length > 1 ? history.back() : go('/')} aria-label={t.common.back}
+              className="grid size-12 place-items-center"><Icon name="back" size={24} strokeWidth={2} /></button>
+          </LiquidGlass>
           <StatusBadge status={st} />
           <span className="w-12" />
         </div>
