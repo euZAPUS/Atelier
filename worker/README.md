@@ -1,4 +1,4 @@
-# atelier-ai: función de servidor (Cloudflare Workers AI, gratis)
+# atelier (worker): función de servidor (Cloudflare Workers AI, gratis)
 
 Convierte una foto de una prenda hecha de cualquier manera en una foto de producto limpia:
 1. **Visión** (`llama-3.2-11b-vision-instruct`): identifica la prenda principal y su categoría, aunque haya más cosas en la foto.

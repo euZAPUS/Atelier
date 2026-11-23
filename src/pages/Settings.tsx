@@ -63,7 +63,7 @@ function AiSection() {
         <p className="text-sm leading-relaxed text-muted">{t.settings.aiBody}</p>
         <label className="block">
           <span className="tag text-muted">{t.settings.aiUrl}</span>
-          <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://atelier-ai.<tu-usuario>.workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
+          <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://atelier.<tu-usuario>.workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
             onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() })} className={input} />
         </label>
         <label className="block">
