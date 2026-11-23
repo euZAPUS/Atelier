@@ -53,6 +53,7 @@ Category guide: tshirts = short sleeve tops; longsleeves = long sleeve tees/shir
     out = await run()
   }
   const text = out.response ?? ''
+  if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
     const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string }
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
@@ -102,9 +103,10 @@ export default {
     const hint = (form.get('hint') as string | null) ?? undefined
     try {
       const bytes = new Uint8Array(await image.arrayBuffer())
-      const id = await identify(env, bytes, hint).catch(() => ({ category: null, description: '' }))
+      let visionError: string | undefined
+      const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '' } })
       const shot = await productShot(env, image, id.description)
-      return json({ image: shot, category: id.category, description: id.description }, 200, h)
+      return json({ image: shot, category: id.category, description: id.description, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
       // Cuota diaria gratis agotada → el móvil usa el recorte local
