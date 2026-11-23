@@ -3,6 +3,8 @@
 name = "atelier"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
+# URL pública https://atelier.<subdominio>.workers.dev (la que se pone en la app)
+workers_dev = true
 
 [ai]
 binding = "AI"
