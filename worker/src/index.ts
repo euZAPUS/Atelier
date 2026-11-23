@@ -17,7 +17,7 @@ export interface Env {
   ACCESS_KEY?: string
 }
 
-const VISION = '@cf/meta/llama-3.2-11b-vision-instruct'
+const VISION = '@cf/meta/llama-4-scout-17b-16e-instruct'
 const IMAGE = '@cf/black-forest-labs/flux-2-klein-4b'
 const CATEGORIES = ['tshirts', 'longsleeves', 'hoodies', 'jackets', 'trousers', 'footwear', 'accessories'] as const
 type Category = (typeof CATEGORIES)[number]
@@ -42,17 +42,16 @@ async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ c
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "description": "<colour, material, type and visible details such as prints or logos, max 18 words>"}
 Category guide: tshirts = short sleeve tops; longsleeves = long sleeve tees/shirts; hoodies = sweatshirts, hoodies AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
-  const run = () => env.AI.run(VISION, { messages: [{ role: 'user', content: prompt }], image: [...bytes], max_tokens: 160 } as never) as Promise<{ response?: string }>
-  let out: { response?: string }
-  try {
-    out = await run()
-  } catch (e) {
-    // La primera vez hay que aceptar la licencia de Meta para este modelo
-    if (!String(e).toLowerCase().includes('agree')) throw e
-    await env.AI.run(VISION, { prompt: 'agree' } as never)
-    out = await run()
-  }
-  const text = out.response ?? ''
+  // Imagen como data URL dentro del mensaje (formato de chat con imagen)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  const dataUrl = `data:image/jpeg;base64,${btoa(bin)}`
+  const out = (await env.AI.run(VISION, {
+    messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
+    max_tokens: 160,
+  } as never)) as { response?: string | object }
+  if (typeof out.response === 'object' && out.response) out.response = JSON.stringify(out.response)
+  const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
     const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string }
