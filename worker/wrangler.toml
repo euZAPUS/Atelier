@@ -1,6 +1,6 @@
 # Función de servidor de Atelier en Cloudflare Workers (plan gratuito).
 # Workers AI se usa con el binding "AI": no hace falta ninguna clave de API.
-name = "atelier-ai"
+name = "atelier"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
 

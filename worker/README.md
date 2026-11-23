@@ -12,20 +12,16 @@ El móvil recorta después ese fondo blanco con su propio modelo.
 
 ## Instalarla (una vez, solo con el navegador)
 
-La despliega GitHub Actions (`.github/workflows/worker.yml`), así que no hace falta clonar nada.
+Se usa **Workers Builds**: Cloudflare se conecta al repo de GitHub y redespliega solo con cada push a `main`.
 
-1. **Cloudflare:** crea una cuenta gratis en https://dash.cloudflare.com/sign-up (no pide tarjeta).
-   - Entra en **Workers & Pages** una vez para que se cree tu subdominio `workers.dev`.
-   - Copia tu **Account ID** (sale en la columna derecha de *Workers & Pages* o en la página principal de la cuenta).
-2. **Token:** ve a *My Profile → API Tokens → Create Token*, elige la plantilla **Edit Cloudflare Workers**, pulsa *Continue to summary* y luego *Create Token*. Copia el token.
-3. **GitHub:** en el repo, *Settings → Secrets and variables → Actions → New repository secret*. Crea tres:
-   - `CLOUDFLARE_API_TOKEN`: el token del paso 2
-   - `CLOUDFLARE_ACCOUNT_ID`: el Account ID
-   - `ATELIER_ACCESS_KEY`: una contraseña que te inventes
-4. **Desplegar:** *Actions → Worker IA → Run workflow*. Al terminar, el resumen del workflow muestra la URL `https://atelier-ai.<tu-subdominio>.workers.dev`.
-5. **App:** en *Ajustes → Foto de producto con IA*, pega la URL y la contraseña, pulsa *Probar conexión* y activa la IA.
-
-A partir de ahí, cada cambio en `worker/` que llegue a `main` se vuelve a desplegar solo.
+1. Crea una cuenta gratis en https://dash.cloudflare.com/sign-up. No pide tarjeta.
+2. Ve a *Workers & Pages → Create → Import a repository* y elige `euZAPUS/Atelier`. El nombre del Worker debe ser **`atelier`**, igual que `name` en `wrangler.toml`.
+3. En *Settings → Build*:
+   - **Root directory:** `worker`
+   - **Build command:** vacío
+   - **Deploy command:** `npx wrangler deploy`
+4. En *Settings → Variables and Secrets*, añade un **Secret** llamado `ACCESS_KEY` con una contraseña que te inventes.
+5. En la app, ve a *Ajustes → Foto de producto con IA*. Pega la URL `https://atelier.<tu-subdominio>.workers.dev` y la contraseña, pulsa *Probar conexión* y activa la IA.
 
 ### Alternativa desde el PC (con el repo clonado)
 
