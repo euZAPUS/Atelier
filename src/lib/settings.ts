@@ -10,7 +10,7 @@ function bootDefaults(): Settings {
   try { boot = JSON.parse(localStorage.getItem(BOOT_KEY) ?? '{}') } catch { /* sin almacenamiento */ }
   return {
     id: 'settings',
-    theme: boot.theme ?? 'system',
+    theme: boot.theme ?? 'dark', // oscuro por defecto; claro como opción
     lang: boot.lang ?? (navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en'),
     washDefaults: {},
     schemaVersion: SCHEMA_VERSION,

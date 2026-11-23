@@ -4,17 +4,28 @@ import { db } from '../db/db'
 import type { GarmentStatus } from '../db/types'
 import { CATEGORIES, type CategoryId } from '../domain/categories'
 import { NAMED_COLORS } from '../domain/color'
-import { colorLabel } from '../domain/naming'
+import { colorLabel, displayName } from '../domain/naming'
 import { garmentStatus } from '../domain/wash'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { GarmentCard } from '../features/wardrobe/GarmentCard'
 import { fmt, useT } from '../i18n'
 import { useSettings } from '../lib/settings'
 import { buttonBase, buttonStyles } from '../ui/Button'
-import { Chip } from '../ui/Chip'
 import { Icon } from '../ui/Icon'
 import { LiquidGlass } from '../ui/LiquidGlass'
-import { PageHeader } from '../ui/PageHeader'
+
+/** Filtro de texto en píldora: activo = píldora blanca, inactivo = solo texto */
+function Pill({ active, onClick, children, swatch }: { active: boolean; onClick: () => void; children: React.ReactNode; swatch?: string }) {
+  return (
+    <button onClick={onClick} aria-pressed={active}
+      className={`press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[0.875rem] font-medium ${active ? 'bg-accent text-accent-ink' : 'text-muted'}`}>
+      {swatch && <span className="size-3 rounded-full ring-1 ring-line-strong" style={{ background: swatch }} />}
+      {children}
+    </button>
+  )
+}
+
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 export function Wardrobe() {
   const t = useT()
@@ -23,27 +34,32 @@ export function Wardrobe() {
   const [cat, setCat] = useState<CategoryId | null>(null)
   const [color, setColor] = useState<string | null>(null)
   const [status, setStatus] = useState<GarmentStatus | null>(null)
+  const [q, setQ] = useState('')
 
   const garments = all ?? []
-  const byCat = useMemo(() => {
-    const m = new Map<string, number>()
-    garments.forEach((g) => m.set(g.category, (m.get(g.category) ?? 0) + 1))
-    return m
-  }, [garments])
+  const byCat = useMemo(() => new Set(garments.map((g) => g.category)), [garments])
   const colors = useMemo(() => {
     const m = new Map<string, number>()
     garments.forEach((g) => g.color.name !== 'pending' && m.set(g.color.name, (m.get(g.color.name) ?? 0) + 1))
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c)
   }, [garments])
   const statuses = useMemo(() => garments.map(garmentStatus), [garments])
-  const shown = garments.filter((g, i) => (!cat || g.category === cat) && (!color || g.color.name === color) && (!status || statuses[i] === status))
-  const filtered = cat || color || status
-  const clean = statuses.filter((s) => s === 'clean').length
+  const query = norm(q.trim())
+  const shown = garments.filter((g, i) =>
+    (!cat || g.category === cat) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
+    (!query || norm(`${displayName(g, lang)} ${g.brand ?? ''} ${g.subcategory ?? ''} ${t.categories[g.category]} ${colorLabel(g.color.name, lang)}`).includes(query)))
+  const filtered = cat || color || status || query
   const count = garments.length === 1 ? t.wardrobe.countOne : fmt(t.wardrobe.count, { n: garments.length })
 
   return (
-    <div className="pb-tab">
-      <PageHeader title={t.wardrobe.title} subtitle={garments.length ? `${count} · ${fmt(t.wardrobe.cleanCount, { n: clean })}` : undefined} />
+    <div className="relative isolate pb-tab">
+      <div className="aura" />
+      <header className="pt-safe px-4 pb-2">
+        <div className="flex items-end justify-between">
+          <h1 className="title">{t.wardrobe.title}</h1>
+          {garments.length > 0 && <span className="mb-1 text-[0.875rem] text-muted">{count}</span>}
+        </div>
+      </header>
 
       {all && garments.length === 0 ? (
         <section className="page-in px-4 pt-2">
@@ -58,25 +74,25 @@ export function Wardrobe() {
         </section>
       ) : (
         <>
-          <div className="sticky z-30 px-2 pb-2" style={{ top: 'calc(env(safe-area-inset-top) + 4px)' }}>
-            <LiquidGlass borderRadius={18} className="space-y-2 overflow-hidden py-2">
-              <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-2">
-                <Chip active={!cat} onClick={() => setCat(null)}>{t.wardrobe.all}</Chip>
-                {CATEGORIES.filter((c) => byCat.has(c.id)).map((c) => (
-                  <Chip key={c.id} active={cat === c.id} onClick={() => setCat(cat === c.id ? null : c.id)} count={byCat.get(c.id)}>{t.categories[c.id]}</Chip>
-                ))}
-              </div>
-              <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-2">
-                {(['clean', 'worn', 'dirty'] as const).map((s) => (
-                  <Chip key={s} active={status === s} onClick={() => setStatus(status === s ? null : s)}>{t.statusPlural[s]}</Chip>
-                ))}
-                {colors.length > 0 && <span className="mx-0.5 w-px shrink-0 bg-line-strong" />}
-                {colors.map(([c, n]) => (
-                  <Chip key={c} active={color === c} onClick={() => setColor(color === c ? null : c)} count={n}
-                    swatch={NAMED_COLORS.find((x) => x.id === c)?.hex}>{colorLabel(c, lang)}</Chip>
-                ))}
-              </div>
+          <div className="sticky z-30 space-y-2 bg-bg/80 px-4 pt-1 pb-2 backdrop-blur-xl" style={{ top: 'env(safe-area-inset-top)' }}>
+            <LiquidGlass borderRadius={12} className="flex h-10 items-center gap-2 px-3">
+              <Icon name="search" size={18} strokeWidth={1.8} className="shrink-0 text-muted" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.wardrobe.search} enterKeyHint="search" type="search"
+                className="h-full w-full bg-transparent text-[1rem] outline-none placeholder:text-muted" />
+              {q && <button onClick={() => setQ('')} aria-label={t.common.close} className="press text-muted"><Icon name="close" size={16} strokeWidth={2} /></button>}
             </LiquidGlass>
+            <div className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4">
+              <Pill active={!status} onClick={() => setStatus(null)}>{t.wardrobe.all}</Pill>
+              {(['clean', 'worn', 'dirty'] as const).map((s) => <Pill key={s} active={status === s} onClick={() => setStatus(status === s ? null : s)}>{t.statusPlural[s]}</Pill>)}
+              <span className="mx-1 my-1.5 w-px shrink-0 bg-line-strong" />
+              {CATEGORIES.filter((c) => byCat.has(c.id)).map((c) => <Pill key={c.id} active={cat === c.id} onClick={() => setCat(cat === c.id ? null : c.id)}>{t.categories[c.id]}</Pill>)}
+              {colors.length > 1 && <span className="mx-1 my-1.5 w-px shrink-0 bg-line-strong" />}
+              {colors.length > 1 && colors.map((c) => (
+                <Pill key={c} active={color === c} onClick={() => setColor(color === c ? null : c)} swatch={NAMED_COLORS.find((x) => x.id === c)?.hex}>
+                  <span className="first-letter:uppercase">{colorLabel(c, lang)}</span>
+                </Pill>
+              ))}
+            </div>
           </div>
           {shown.length ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pt-2">
@@ -85,7 +101,7 @@ export function Wardrobe() {
           ) : filtered && (
             <div className="page-in px-4 pt-12 text-center">
               <p className="text-lg font-semibold">{t.wardrobe.noMatch}</p>
-              <button className="press mt-2 text-[0.9375rem] font-medium text-muted underline" onClick={() => { setCat(null); setColor(null); setStatus(null) }}>{t.wardrobe.clearFilters}</button>
+              <button className="press mt-2 text-[0.9375rem] font-medium text-muted underline" onClick={() => { setCat(null); setColor(null); setStatus(null); setQ('') }}>{t.wardrobe.clearFilters}</button>
             </div>
           )}
         </>

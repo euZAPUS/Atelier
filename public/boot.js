@@ -2,5 +2,6 @@
 // Va en un fichero aparte (no inline) para que la CSP no necesite 'unsafe-inline'.
 try {
   var b = JSON.parse(localStorage.getItem('atelier:boot') || '{}')
-  if (b.theme === 'light' || b.theme === 'dark') document.documentElement.setAttribute('data-theme', b.theme)
+  var th = b.theme || 'dark' // oscuro por defecto
+  if (th === 'light' || th === 'dark') document.documentElement.setAttribute('data-theme', th)
 } catch (e) {}

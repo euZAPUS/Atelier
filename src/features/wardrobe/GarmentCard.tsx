@@ -17,7 +17,7 @@ export function GarmentCard({ g, index }: { g: Garment; index: number }) {
   const st = garmentStatus(g)
   return (
     <TLink href={`/prenda/${g.id}`} className="rise press block" style={{ ['--i' as string]: index }}>
-      <div className={`relative aspect-[4/5] overflow-hidden rounded-[14px] bg-tile ${pending ? 'processing' : ''}`}>
+      <div className={`relative aspect-[4/5] overflow-hidden rounded-[18px] bg-tile ${pending ? 'processing' : ''}`}>
         {url && (
           <img src={url} alt="" loading="lazy" decoding="async" style={{ viewTransitionName: `g-${g.id}` }}
             className={`absolute inset-0 size-full ${isCutout ? 'product-shadow object-contain p-[12%]' : 'object-cover'} ${pending ? 'opacity-70' : ''}`} />
@@ -27,7 +27,7 @@ export function GarmentCard({ g, index }: { g: Garment; index: number }) {
       <p className="mt-2 truncate px-0.5 text-[0.9375rem] font-medium">{displayName(g, lang)}</p>
       <p className="flex items-center gap-1.5 px-0.5 text-[0.8125rem] text-muted">
         <span className={`size-1.5 shrink-0 rounded-full ${dot[st]}`} />
-        <span className="truncate">{t.status[st]}{g.color.name !== 'pending' ? ` · ${colorLabel(g.color.name, lang)}` : ''}{g.brand ? ` · ${g.brand}` : ''}</span>
+        <span className="truncate">{t.status[st]}{g.brand ? ` · ${g.brand}` : g.color.name !== 'pending' ? ` · ${colorLabel(g.color.name, lang)}` : ''}</span>
       </p>
     </TLink>
   )

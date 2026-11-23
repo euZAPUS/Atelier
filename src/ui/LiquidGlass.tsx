@@ -100,7 +100,7 @@ export function LiquidGlass({ children, className = '', borderRadius = 24, tint 
 
   const map = useMemo(() => (slot && size && size.w > 0 && size.h > 0 ? displacementMap(size.w, size.h, borderRadius, Math.min(24, size.h / 2)) : null), [slot, size, borderRadius])
 
-  const backdrop = map ? `url(#${id}) blur(4px) saturate(160%)` : 'blur(12px) saturate(160%)'
+  const backdrop = map ? `url(#${id}) blur(10px) saturate(160%)` : 'blur(16px) saturate(160%)'
   return (
     <Tag ref={ref as never} className={`liquid-glass liquid-${tint} ${className}`}
       style={{ ...style, borderRadius, backdropFilter: backdrop, WebkitBackdropFilter: map ? undefined : backdrop }}>

@@ -8,11 +8,11 @@
    ===================================================================== */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f4f4f3, #0b0b0c);
-  --surface: light-dark(#ffffff, #18181a);
-  --surface-2: light-dark(#f0f0ee, #222224);
-  --tile: light-dark(#e4e4e1, #161618); /* fondo de foto de producto (bordes) */
-  --tile-light: light-dark(#fbfbfa, #48484c); /* foco de luz detrás de la prenda: lo negro se distingue */
+  --bg: light-dark(#f4f4f3, #000000);
+  --surface: light-dark(#ffffff, #111113);
+  --surface-2: light-dark(#f0f0ee, #1c1c1e);
+  --tile: light-dark(#e4e4e1, #111113); /* fondo de foto de producto (bordes) */
+  --tile-light: light-dark(#fbfbfa, #3f3f43); /* foco de luz detrás de la prenda: lo negro se distingue */
   --ink: light-dark(#111111, #f4f4f5);
   --ink-muted: light-dark(#6e6e73, #98989f);
   --ink-faint: light-dark(#a1a1a6, #636366);
@@ -32,7 +32,7 @@
   --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter Variable', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(.2, .8, .2, 1);
-  --tab-h: 3.6rem;
+  --tab-h: 3.9rem;
 }
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark'] { color-scheme: dark; }
@@ -151,7 +151,13 @@ nav.tabbar { view-transition-name: tabbar; }
 
 /* Zonas seguras del iPhone (Dynamic Island y barra de inicio) */
 .pt-safe { padding-top: max(env(safe-area-inset-top), 1rem); }
-.pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 1.5rem); }
+.pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 2.5rem); }
+
+/* Brillo de color muy tenue detrás del título (del estilo futurista, contenido) */
+.aura { position: absolute; top: -140px; right: -80px; width: 320px; height: 240px; pointer-events: none; z-index: -1;
+  background: conic-gradient(from 180deg, #7cf7ff2e, #b388ff2e, #ff8ad82e, #7cf7ff2e); filter: blur(50px); }
+:root[data-theme='light'] .aura { display: none; }
+@media (prefers-color-scheme: light) { :root:not([data-theme='dark']) .aura { display: none; } }
 
 /* ---------- Liquid Glass (ver src/ui/LiquidGlass.tsx) — solo controles flotantes ---------- */
 .liquid-glass {
@@ -167,5 +173,5 @@ nav.tabbar { view-transition-name: tabbar; }
   background: linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 38%, transparent 60%);
 }
 /* Tinte justo para mantener el contraste del texto encima (WCAG) */
-.liquid-light { background: light-dark(rgb(255 255 255 / .72), rgb(30 30 32 / .66)); color: var(--ink); border: 1px solid var(--line); }
+.liquid-light { background: light-dark(rgb(255 255 255 / .9), rgb(28 28 30 / .9)); color: var(--ink); border: 1px solid light-dark(var(--line), rgb(255 255 255 / .12)); }
 .liquid-dark { background: rgb(18 18 20 / .78); color: #f4f4f5; }

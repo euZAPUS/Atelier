@@ -8,7 +8,7 @@ export const es = {
   status: { clean: 'Limpia', worn: 'Usada', dirty: 'Sucia' },
   statusPlural: { all: 'Todas', clean: 'Limpias', worn: 'Usadas', dirty: 'Sucias' },
   wardrobe: {
-    title: 'Armario', countOne: '1 prenda', count: '{n} prendas', cleanCount: '{n} limpias', all: 'Todo',
+    title: 'Armario', countOne: '1 prenda', count: '{n} prendas', cleanCount: '{n} limpias', all: 'Todo', search: 'Buscar',
     emptyTitle: 'Armario vacío',
     emptyBody: 'Haz una foto a una prenda, como esté. Atelier la convierte en una foto de producto y la ordena por ti.',
     emptyCta: 'Añadir la primera prenda',
@@ -37,6 +37,8 @@ export const es = {
     added: 'Alta', lastWorn: 'Último uso', neverWorn: 'Nunca', retry: 'Reintentar recorte', enhance: 'Mejorar con IA', enhancing: 'Generando…',
     retrying: 'Recortando…', cutFailed: 'El recorte falló', archive: 'Archivar', unarchive: 'Recuperar',
     delete: 'Eliminar', confirmDelete: '¿Eliminar esta prenda para siempre?', notFound: 'Esta prenda no existe',
+    statWash: 'antes de lavar', statTotal: 'veces puesta', statLast: 'último uso', days: '{n} d',
+    ownColors: 'Sus colores', matches: 'Combina con', avoid: 'Evita',
     details: 'Detalles', noBrand: 'Sin marca', notesPlaceholder: 'Talla, dónde la compraste, cómo lavarla…',
     washSection: 'Lavado', washNever: 'No se ensucia con el uso', washProgress: '{n} de {max} usos antes de lavar',
     dirtyManual: 'Marcar como sucia', cleanManual: 'Marcar como limpia',

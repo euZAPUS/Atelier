@@ -3,6 +3,8 @@ import { useState, type ReactNode } from 'react'
 import { db } from '../db/db'
 import type { Garment } from '../db/types'
 import { CATEGORIES, categoryById, SUBCATEGORY_WASH, type CategoryId } from '../domain/categories'
+import { NAMED_COLORS } from '../domain/color'
+import { clashesFor, matchesFor } from '../domain/harmony'
 import { colorLabel, displayName } from '../domain/naming'
 import { garmentStatus } from '../domain/wash'
 import { reprocess } from '../features/capture/store'
@@ -13,6 +15,7 @@ import { useImage } from '../lib/useImage'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
 import { Icon } from '../ui/Icon'
+import { LiquidGlass } from '../ui/LiquidGlass'
 import { HeaderPill, NavButton, PageHeader } from '../ui/PageHeader'
 import { StatusBadge } from '../ui/StatusBadge'
 
@@ -35,6 +38,21 @@ function TextField({ value, placeholder, onSave, list, multiline }: { value?: st
     ? <textarea defaultValue={value} placeholder={placeholder} rows={3} onBlur={(e) => e.target.value !== (value ?? '') && onSave(e.target.value)} className={`${cls} resize-none`} />
     : <input defaultValue={value} placeholder={placeholder} list={list} enterKeyHint="done" onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         onBlur={(e) => e.target.value !== (value ?? '') && onSave(e.target.value)} className={`${cls} text-right`} />
+}
+
+const hexOf = (id: string) => NAMED_COLORS.find((c) => c.id === id)?.hex ?? '#888'
+
+/** Muestra de color con su nombre debajo */
+function Swatch({ hex, label, selected, onClick, crossed }: { hex: string; label: string; selected?: boolean; onClick?: () => void; crossed?: boolean }) {
+  const Tag = onClick ? 'button' : 'div'
+  return (
+    <Tag onClick={onClick} className={`flex w-14 shrink-0 flex-col items-center gap-1.5 ${onClick ? 'press' : ''}`}>
+      <span className={`relative size-10 rounded-full ring-offset-2 ring-offset-bg ${selected ? 'ring-2 ring-ink' : 'ring-1 ring-line-strong'}`} style={{ background: hex }}>
+        {crossed && <span className="absolute inset-0 m-auto h-[2px] w-[120%] -translate-x-[8%] rotate-45 rounded bg-dirty" />}
+      </span>
+      <span className="line-clamp-2 text-center text-[0.6875rem] leading-tight text-muted first-letter:uppercase">{label}</span>
+    </Tag>
+  )
 }
 
 export function GarmentDetail({ id }: { id: string }) {
@@ -75,39 +93,84 @@ export function GarmentDetail({ id }: { id: string }) {
   }
   const washText = g.washAfter === null ? t.garment.washNever : fmt(t.garment.washProgress, { n: g.wearsSinceWash, max: g.washAfter })
 
+  const daysSince = g.lastWornAt ? Math.max(0, Math.round((Date.now() - new Date(g.lastWornAt).getTime()) / 86_400_000)) : null
+  const subtitle = [g.brand, g.subcategory || t.categories[g.category]].filter(Boolean).join(' · ')
+  const matches = g.color.name !== 'pending' ? matchesFor(g.color.name) : []
+  const clashes = g.color.name !== 'pending' ? clashesFor(g.color.name) : []
+
   return (
     <div className="pb-tab">
-      <PageHeader left={<NavButton icon="back" label={t.common.back} onClick={back} />} center={<HeaderPill icon="tag">{t.categories[g.category]}</HeaderPill>} title={displayName(g, lang)} />
-
-      <div className="page-in space-y-6 px-4">
-        <div className="card overflow-hidden">
-          <div className={`relative h-[44vh] bg-tile ${status === 'pending' ? 'processing' : ''}`}>
-            {url && <img src={url} alt="" style={{ viewTransitionName: `g-${g.id}` }}
-              className={`absolute inset-0 size-full ${isCutout ? 'product-shadow object-contain p-[10%]' : 'object-cover'}`} />}
-            <span className="absolute top-3 left-3 inline-flex h-7 items-center gap-1.5 rounded-full bg-black/55 px-2.5 text-[0.75rem] font-medium text-white backdrop-blur">
-              <Icon name="clock" size={14} strokeWidth={1.8} />{fmtDate(g.createdAt)}
-            </span>
-            <span className="absolute top-3 right-3 inline-flex h-7 items-center gap-1.5 rounded-full bg-white/90 px-2.5 text-[0.75rem] font-semibold text-black">
-              <span className="size-3 rounded-full ring-1 ring-black/10" style={{ background: g.color.hex }} />{colorLabel(g.color.name, lang)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <span className="text-[0.875rem] text-muted">{status === 'failed' ? t.garment.cutFailed : status === 'pending' ? t.wardrobe.processing : g.brand || t.garment.noBrand}</span>
-            {(aiOn || status !== 'ready') && (
-              <button onClick={redo} disabled={busy} className="press inline-flex items-center gap-1.5 text-[0.875rem] font-semibold disabled:opacity-40">
-                <Icon name={aiOn ? 'sparkle' : 'refresh'} size={16} strokeWidth={1.8} />
-                {busy ? t.garment.enhancing : aiOn ? t.garment.enhance : t.garment.retry}
+      {/* Prenda a todo lo ancho, con los controles flotando encima */}
+      <div className={`relative h-[56vh] min-h-80 bg-tile ${status === 'pending' ? 'processing' : ''}`}>
+        {url && <img src={url} alt="" style={{ viewTransitionName: `g-${g.id}` }}
+          className={`absolute inset-0 size-full ${isCutout ? 'product-shadow object-contain px-[16%] pt-[22%] pb-[10%]' : 'object-cover'}`} />}
+        <div className="pt-safe absolute inset-x-0 top-0 flex items-center justify-between px-4">
+          <NavButton icon="back" label={t.common.back} onClick={back} />
+          <HeaderPill icon="tag">{t.categories[g.category]}</HeaderPill>
+          {(aiOn || status !== 'ready') ? (
+            <LiquidGlass borderRadius={14} className="press size-11">
+              <button onClick={redo} disabled={busy} aria-label={aiOn ? t.garment.enhance : t.garment.retry} className="grid size-11 place-items-center disabled:opacity-40">
+                <Icon name={aiOn ? 'sparkle' : 'refresh'} size={20} strokeWidth={1.8} className={busy ? 'pulse-dot' : ''} />
               </button>
-            )}
+            </LiquidGlass>
+          ) : <span className="size-11" />}
+        </div>
+        {(status === 'failed' || status === 'pending' || busy) && (
+          <span className="absolute bottom-3 left-4 rounded-full bg-black/60 px-2.5 py-1 text-[0.75rem] font-medium text-white backdrop-blur">
+            {busy ? t.garment.enhancing : status === 'failed' ? t.garment.cutFailed : t.wardrobe.processing}
+          </span>
+        )}
+      </div>
+
+      <div className="page-in space-y-7 px-4 pt-5">
+        <div>
+          <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.02em]">{displayName(g, lang)}</h1>
+          <p className="mt-1 text-[0.9375rem] text-muted">{subtitle}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <StatusBadge status={st} pill />
+            <span className="text-[0.875rem] text-muted">{washText}</span>
           </div>
         </div>
 
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={st} pill />
-            <span className="text-[0.9375rem] text-muted">{washText}</span>
-          </div>
+        {/* Cifras grandes */}
+        <div className="grid grid-cols-3 border-t border-line-strong pt-4">
+          {[
+            [g.washAfter === null ? '∞' : `${g.wearsSinceWash}/${g.washAfter}`, t.garment.statWash],
+            [String(g.wearsTotal), t.garment.statTotal],
+            [daysSince === null ? '—' : fmt(t.garment.days, { n: daysSince }), t.garment.statLast],
+          ].map(([v, k]) => (
+            <div key={k}><b className="block text-[1.5rem] font-normal tracking-tight tabular-nums">{v}</b><span className="block pr-2 text-[0.75rem] leading-tight text-muted">{k}</span></div>
+          ))}
         </div>
+
+        {/* Colores: los suyos, con qué combina y qué evitar */}
+        {g.color.name !== 'pending' && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="section-label mb-2 px-1">{t.garment.ownColors}</h2>
+              <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+                {(g.palette.length ? g.palette : [g.color]).map((c) => (
+                  <Swatch key={c.hex} hex={c.hex} label={colorLabel(c.name, lang)} selected={c.hex === g.color.hex}
+                    onClick={g.palette.length > 1 ? () => update(g.id, { color: c }) : undefined} />
+                ))}
+              </div>
+            </div>
+            {matches.length > 0 && (
+              <div>
+                <h2 className="section-label mb-2 px-1">{t.garment.matches}</h2>
+                <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+                  {matches.map((c) => <Swatch key={c} hex={hexOf(c)} label={colorLabel(c, lang)} />)}
+                </div>
+              </div>
+            )}
+            {clashes.length > 0 && (
+              <div>
+                <h2 className="section-label mb-2 px-1">{t.garment.avoid}</h2>
+                <div className="flex gap-2">{clashes.map((c) => <Swatch key={c} hex={hexOf(c)} label={colorLabel(c, lang)} crossed />)}</div>
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           <h2 className="section-label mb-2 px-1">{t.garment.category}</h2>
@@ -122,13 +185,6 @@ export function GarmentDetail({ id }: { id: string }) {
             <Row label={t.garment.name}><TextField value={g.name} placeholder={displayName({ ...g, name: '' }, lang)} onSave={(name) => update(g.id, { name: name.trim() })} /></Row>
             <Row label={t.garment.subcategory}><TextField value={g.subcategory} placeholder={t.garment.subPlaceholder} onSave={setSub} list="subcats" /></Row>
             <Row label={t.garment.brand}><TextField value={g.brand} placeholder="—" onSave={(brand) => update(g.id, { brand: brand.trim() || undefined })} /></Row>
-            {g.palette.length > 1 && (
-              <Row label={t.garment.color} stacked>
-                <div className="flex flex-wrap gap-1.5">
-                  {g.palette.map((c) => <Chip key={c.hex} active={c.hex === g.color.hex} swatch={c.hex} onClick={() => update(g.id, { color: c })}>{colorLabel(c.name, lang)}</Chip>)}
-                </div>
-              </Row>
-            )}
             <Row label={t.garment.notes} stacked><TextField value={g.notes} placeholder={t.garment.notesPlaceholder} multiline onSave={(notes) => update(g.id, { notes: notes.trim() || undefined })} /></Row>
           </div>
           <datalist id="subcats"><option value="Vaquero" /><option value="Chino" /><option value="Cargo" /><option value="Polo" /><option value="Zapatillas" /><option value="Gorra" /></datalist>

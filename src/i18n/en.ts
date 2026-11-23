@@ -10,7 +10,7 @@ export const en: Dict = {
   status: { clean: 'Clean', worn: 'Worn', dirty: 'Dirty' },
   statusPlural: { all: 'All', clean: 'Clean', worn: 'Worn', dirty: 'Dirty' },
   wardrobe: {
-    title: 'Wardrobe', countOne: '1 item', count: '{n} items', cleanCount: '{n} clean', all: 'All',
+    title: 'Wardrobe', countOne: '1 item', count: '{n} items', cleanCount: '{n} clean', all: 'All', search: 'Search',
     emptyTitle: 'Empty closet',
     emptyBody: 'Snap a garment, however it is lying. Atelier turns it into a product photo and files it for you.',
     emptyCta: 'Add your first item',
@@ -39,6 +39,8 @@ export const en: Dict = {
     added: 'Added', lastWorn: 'Last worn', neverWorn: 'Never', retry: 'Retry cutout', enhance: 'Enhance with AI', enhancing: 'Generating…',
     retrying: 'Cutting out…', cutFailed: 'The cutout failed', archive: 'Archive', unarchive: 'Restore',
     delete: 'Delete', confirmDelete: 'Delete this item forever?', notFound: 'This item does not exist',
+    statWash: 'before washing', statTotal: 'times worn', statLast: 'last worn', days: '{n} d',
+    ownColors: 'Its colours', matches: 'Goes with', avoid: 'Avoid',
     details: 'Details', noBrand: 'No brand', notesPlaceholder: 'Size, where you bought it, how to wash it…',
     washSection: 'Washing', washNever: 'Does not get dirty with wear', washProgress: '{n} of {max} wears before washing',
     dirtyManual: 'Mark as dirty', cleanManual: 'Mark as clean',
