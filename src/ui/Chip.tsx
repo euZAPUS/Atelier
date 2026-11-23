@@ -5,13 +5,13 @@ export function Chip({ active, onClick, children, swatch, count }: { active?: bo
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`press inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-[1.5px] px-4 text-[0.8rem] font-bold uppercase tracking-wide ${
-        active ? 'border-ink bg-ink text-bg' : 'border-line-soft bg-surface text-ink'
+      className={`press inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[0.875rem] font-medium ${
+        active ? 'border-transparent bg-accent text-accent-ink' : 'border-line-strong bg-surface text-ink'
       }`}
     >
-      {swatch && <span className="size-3.5 rounded-full ring-1 ring-line-soft" style={{ background: swatch }} />}
+      {swatch && <span className="size-3.5 rounded-full ring-1 ring-line-strong" style={{ background: swatch }} />}
       {children}
-      {count !== undefined && <span className={`tag ${active ? 'opacity-70' : 'text-muted'}`}>{count}</span>}
+      {count !== undefined && <span className={active ? 'opacity-60' : 'text-muted'}>{count}</span>}
     </button>
   )
 }

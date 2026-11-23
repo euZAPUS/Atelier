@@ -1,20 +1,74 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { TLink } from '../lib/nav'
 import { fmt, useT } from '../i18n'
-import { updateSettings, useSettings } from '../lib/settings'
-import { formatBytes, requestPersist, storageInfo } from '../lib/storage'
 import { aiPing } from '../lib/ai'
 import { bgDevice, modelCached, onBgProgress, warmUp, type BgDevice } from '../lib/bg'
-import { Button } from '../ui/Button'
+import { TLink, useNav } from '../lib/nav'
+import { updateSettings, useSettings } from '../lib/settings'
+import { formatBytes, requestPersist, storageInfo } from '../lib/storage'
 import { Icon, type IconName } from '../ui/Icon'
 import { PageHeader } from '../ui/PageHeader'
+import { Toggle } from '../ui/Toggle'
 
-function Section({ label, children }: { label: string; children: ReactNode }) {
+function Section({ label, footer, children }: { label: string; footer?: string; children: ReactNode }) {
   return (
     <section className="mb-7">
-      <h2 className="display mb-2 text-3xl">{label}</h2>
-      <div className="divide-y divide-line-soft border-y-2 border-ink">{children}</div>
+      <h2 className="section-label mb-2 px-1">{label}</h2>
+      <div className="group">{children}</div>
+      {footer && <p className="mt-2 px-1 text-[0.8125rem] leading-relaxed text-muted">{footer}</p>}
     </section>
+  )
+}
+
+/** Fila con icono en cuadrado gris, como en Ajustes de iOS */
+function Row({ icon, label, value, children, onClick }: { icon?: IconName; label: string; value?: ReactNode; children?: ReactNode; onClick?: () => void }) {
+  const inner = (
+    <>
+      {icon && <span className="grid size-8 shrink-0 place-items-center rounded-[9px] bg-surface-2"><Icon name={icon} size={18} strokeWidth={1.7} /></span>}
+      <span className="flex-1 text-[0.9375rem]">{label}</span>
+      {value !== undefined && <span className="text-[0.9375rem] text-muted">{value}</span>}
+      {children}
+    </>
+  )
+  const cls = 'flex min-h-13 w-full items-center gap-3 px-4 py-2 text-left'
+  return onClick ? <button onClick={onClick} className={`press ${cls}`}>{inner}</button> : <div className={cls}>{inner}</div>
+}
+
+function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex rounded-[10px] bg-surface-2 p-0.5">
+      {options.map((o) => (
+        <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
+          className={`press h-8 flex-1 rounded-[8px] px-3 text-[0.8125rem] font-medium ${value === o.id ? 'bg-surface text-ink shadow-[0_1px_3px_rgb(0_0_0/.15)]' : 'text-muted'}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function AiSection() {
+  const t = useT()
+  const s = useSettings()
+  const ai = s.ai ?? { enabled: false, url: '' }
+  const [test, setTest] = useState<'ok' | 'auth' | 'unreachable' | 'testing' | null>(null)
+  const save = (patch: Partial<typeof ai>) => updateSettings({ ai: { ...ai, ...patch } })
+  const input = 'w-full min-w-0 bg-transparent text-right text-[0.9375rem] text-muted outline-none placeholder:text-faint'
+  return (
+    <Section label={t.settings.ai} footer={t.settings.aiBody}>
+      <Row icon="sparkle" label={t.settings.aiEnable}><Toggle checked={ai.enabled} label={t.settings.aiEnable} onChange={(enabled) => save({ enabled })} /></Row>
+      <Row label={t.settings.aiUrl}>
+        <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://…workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
+          onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() })} className={`${input} max-w-[60%]`} />
+      </Row>
+      <Row label={t.settings.aiKey}>
+        <input key={`k${ai.key}`} defaultValue={ai.key} type="password" placeholder="—" autoCapitalize="off" autoCorrect="off"
+          onBlur={(e) => e.target.value !== (ai.key ?? '') && save({ key: e.target.value || undefined })} className={`${input} max-w-[55%]`} />
+      </Row>
+      <Row label={t.settings.aiTest} onClick={ai.url ? async () => { setTest('testing'); setTest(await aiPing(ai.url, ai.key)) } : undefined}
+        value={test === 'testing' ? '…' : test === 'ok' ? <span className="text-clean">{t.settings.aiOk}</span> : test === 'auth' ? <span className="text-dirty">{t.settings.aiAuth}</span> : test === 'unreachable' ? <span className="text-dirty">{t.settings.aiUnreachable}</span> : undefined}>
+        {!test && <Icon name="chevron" size={16} className="text-faint" />}
+      </Row>
+    </Section>
   )
 }
 
@@ -30,131 +84,54 @@ function CutoutSection() {
     try { await warmUp() } finally { setProgress(null); setModel(await modelCached()) }
   }
   return (
-    <Section label={t.settings.cutout}>
-      <div className="space-y-3 py-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-bold uppercase">{t.settings.engine}</span>
-          <span className="tag text-muted">ISNet · {device === 'gpu' ? 'WebGPU' : device === 'cpu' ? 'CPU (WASM)' : '…'}</span>
-        </div>
-        <div className="flex items-start gap-3">
-          <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${model?.cached ? 'bg-clean' : 'bg-worn'}`} />
-          <p className="text-sm font-medium">{model?.cached ? t.settings.modelReady : fmt(t.settings.modelMissing, { size: formatBytes(model?.bytes ?? 0) })}</p>
-        </div>
-        {model && !model.cached && (
-          <Button block icon="bolt" disabled={progress !== null} onClick={download}>
-            {progress !== null ? fmt(t.settings.downloading, { p: Math.round(progress * 100) }) : t.settings.download}
-          </Button>
-        )}
-      </div>
+    <Section label={t.settings.cutout} footer={t.settings.cutoutBody}>
+      <Row icon="scan" label={t.settings.engine} value={device === 'gpu' ? 'WebGPU' : device === 'cpu' ? 'CPU' : '…'} />
+      <Row icon={model?.cached ? 'check' : 'bolt'} label={model?.cached ? t.settings.modelReady : fmt(t.settings.modelMissing, { size: formatBytes(model?.bytes ?? 0) })}
+        onClick={model && !model.cached && progress === null ? download : undefined}
+        value={progress !== null ? fmt(t.settings.downloading, { p: Math.round(progress * 100) }) : model && !model.cached ? t.settings.download : undefined} />
     </Section>
-  )
-}
-
-function AiSection() {
-  const t = useT()
-  const s = useSettings()
-  const ai = s.ai ?? { enabled: false, url: '' }
-  const [test, setTest] = useState<'ok' | 'auth' | 'unreachable' | 'testing' | null>(null)
-  const save = (patch: Partial<typeof ai>) => updateSettings({ ai: { ...ai, ...patch } })
-  const input = 'mt-1 w-full border-b-2 border-ink bg-transparent py-2 font-mono text-sm outline-none'
-  return (
-    <Section label={t.settings.ai}>
-      <div className="space-y-4 py-4">
-        <p className="text-sm leading-relaxed text-muted">{t.settings.aiBody}</p>
-        <label className="block">
-          <span className="tag text-muted">{t.settings.aiUrl}</span>
-          <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://atelier.<tu-usuario>.workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
-            onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() })} className={input} />
-        </label>
-        <label className="block">
-          <span className="tag text-muted">{t.settings.aiKey}</span>
-          <input key={`k${ai.key}`} defaultValue={ai.key} type="password" autoCapitalize="off" autoCorrect="off"
-            onBlur={(e) => e.target.value !== (ai.key ?? '') && save({ key: e.target.value || undefined })} className={input} />
-        </label>
-        <div className="flex items-center gap-3">
-          <Button icon="bolt" disabled={!ai.url || test === 'testing'} onClick={async () => { setTest('testing'); setTest(await aiPing(ai.url, ai.key)) }}>{t.settings.aiTest}</Button>
-          {test && test !== 'testing' && (
-            <span className={`text-sm font-bold ${test === 'ok' ? 'text-clean' : 'text-dirty'}`}>
-              {test === 'ok' ? t.settings.aiOk : test === 'auth' ? t.settings.aiAuth : t.settings.aiUnreachable}
-            </span>
-          )}
-        </div>
-        <Segmented value={ai.enabled ? 'on' : 'off'} onChange={(v) => save({ enabled: v === 'on' })}
-          options={[{ id: 'off', label: 'Off' }, { id: 'on', label: t.settings.aiEnable }]} />
-      </div>
-    </Section>
-  )
-}
-
-function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { id: T; label: string; icon?: IconName }[]; onChange: (v: T) => void }) {
-  return (
-    <div className="flex rounded-full border-2 border-ink p-1">
-      {options.map((o) => (
-        <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
-          className={`press flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-bold uppercase ${value === o.id ? 'bg-ink text-bg' : 'text-muted'}`}>
-          {o.icon && <Icon name={o.icon} size={18} />}{o.label}
-        </button>
-      ))}
-    </div>
   )
 }
 
 export function Settings() {
   const t = useT()
+  const go = useNav()
   const s = useSettings()
   const [info, setInfo] = useState<Awaited<ReturnType<typeof storageInfo>>>()
   useEffect(() => { storageInfo().then(setInfo) }, [])
 
   return (
-    <div className="page-in pb-tab">
-      <PageHeader code="05 / SETTINGS" title={t.settings.title} />
-      <div className="px-4 pt-4">
+    <div className="pb-tab">
+      <PageHeader title={t.settings.title} />
+      <div className="page-in px-4">
         <Section label={t.settings.appearance}>
-          <div className="space-y-2 py-4">
-            <span className="tag text-muted">{t.settings.theme}</span>
+          <div className="space-y-2 px-4 py-3">
+            <span className="text-[0.9375rem]">{t.settings.theme}</span>
             <Segmented value={s.theme} onChange={(theme) => updateSettings({ theme })} options={[
-              { id: 'system', label: t.settings.themes.system, icon: 'auto' },
-              { id: 'light', label: t.settings.themes.light, icon: 'sun' },
-              { id: 'dark', label: t.settings.themes.dark, icon: 'moon' },
+              { id: 'system', label: t.settings.themes.system }, { id: 'light', label: t.settings.themes.light }, { id: 'dark', label: t.settings.themes.dark },
             ]} />
           </div>
-          <div className="space-y-2 py-4">
-            <span className="tag text-muted">{t.settings.language}</span>
-            <Segmented value={s.lang} onChange={(lang) => updateSettings({ lang })} options={[
-              { id: 'es', label: 'Español' }, { id: 'en', label: 'English' },
-            ]} />
+          <div className="space-y-2 px-4 py-3">
+            <span className="text-[0.9375rem]">{t.settings.language}</span>
+            <Segmented value={s.lang} onChange={(lang) => updateSettings({ lang })} options={[{ id: 'es', label: 'Español' }, { id: 'en', label: 'English' }]} />
           </div>
         </Section>
 
         <AiSection />
-
         <CutoutSection />
 
-        <Section label={t.settings.storage}>
-          <div className="space-y-3 py-4">
-            <div className="flex items-start gap-3">
-              <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${info?.persisted ? 'bg-clean' : 'bg-worn'}`} />
-              <div className="text-sm">
-                <p className="font-medium">{info?.persisted ? t.settings.persisted : t.settings.notPersisted}</p>
-                {info?.supported && <p className="tag mt-1 text-muted">{fmt(t.settings.used, { used: formatBytes(info.usage) })}</p>}
-              </div>
-            </div>
-            {info && !info.persisted && (
-              <Button block onClick={async () => { await requestPersist(); setInfo(await storageInfo()) }}>{t.settings.requestPersist}</Button>
-            )}
-          </div>
+        <Section label={t.settings.storage} footer={info?.persisted ? undefined : t.settings.notPersisted}>
+          <Row icon="archive" label={info?.persisted ? t.settings.persisted : t.settings.requestPersist}
+            onClick={info && !info.persisted ? async () => { await requestPersist(); setInfo(await storageInfo()) } : undefined}
+            value={info?.supported ? formatBytes(info.usage) : undefined} />
         </Section>
 
         <Section label={t.settings.about}>
-          <TLink href="/kit" className="press flex min-h-14 items-center justify-between">
-            <span className="flex items-center gap-3 text-sm font-bold uppercase"><Icon name="ruler" size={20} />{t.settings.designKit}</span>
-            <Icon name="chevron" size={18} className="text-muted" />
-          </TLink>
-          <div className="flex min-h-14 items-center justify-between text-sm">
-            <span className="font-bold uppercase">{t.settings.version}</span><span className="tag text-muted">{__APP_VERSION__} · {__BUILD_ID__}</span>
-          </div>
-          <p className="tag py-4 text-muted">{t.settings.license}</p>
+          <Row icon="info" label={t.settings.intro} onClick={() => go('/bienvenida')}><Icon name="chevron" size={16} className="text-faint" /></Row>
+          <TLink href="/kit" className="block"><Row icon="ruler" label={t.settings.designKit}><Icon name="chevron" size={16} className="text-faint" /></Row></TLink>
+          <Row icon="tag" label={t.settings.version} value={`${__APP_VERSION__} · ${__BUILD_ID__}`} />
         </Section>
+        <p className="pb-4 text-center text-[0.8125rem] text-faint">{t.settings.license}</p>
       </div>
     </div>
   )

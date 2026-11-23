@@ -1,34 +1,37 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/inter';
 
 /* =====================================================================
-   TOKENS — streetwear: blanco roto / negro, acento lima ácido,
-   titulares Archivo condensada en mayúsculas y etiquetas mono tipo SKU.
-   Todo el color sale de aquí; un tema nuevo = redefinir estas variables.
+   TOKENS — estética de tienda de ropa: blanco o negro, gris de estudio
+   para las fotos de producto y tipografía del sistema (SF en el iPhone).
+   Herramienta de uso diario: sobria, legible y rápida. Todo el color sale de aquí.
    ===================================================================== */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f1f1ee, #0a0a0a);
-  --surface: light-dark(#ffffff, #141414);
-  --tile: light-dark(#e6e6e2, #1b1b1b); /* fondo de foto de producto */
-  --ink: light-dark(#0a0a0a, #f4f4f0);
-  --ink-muted: light-dark(#6b6b68, #8c8c88);
-  --line: light-dark(#0a0a0a, #f4f4f0);
-  --line-soft: light-dark(#0a0a0a1f, #f4f4f01f);
-  --accent: #c8ff00;
-  --accent-ink: #0a0a0a;
-  --clean: #00c46a;
-  --worn: #ffb300;
-  --dirty: #ff3b30;
-  --bar-bg: light-dark(#0a0a0a, #1a1a1a);
-  --bar-ink: light-dark(#f4f4f0, #f4f4f0);
-  --bar-muted: #b4b4ae; /* contraste ≥ 4.5:1 sobre el cristal ahumado */
+  --bg: light-dark(#f4f4f3, #0b0b0c);
+  --surface: light-dark(#ffffff, #18181a);
+  --surface-2: light-dark(#f0f0ee, #222224);
+  --tile: light-dark(#ececea, #1f1f21); /* fondo de foto de producto */
+  --ink: light-dark(#111111, #f4f4f5);
+  --ink-muted: light-dark(#6e6e73, #98989f);
+  --ink-faint: light-dark(#a1a1a6, #636366);
+  --line: light-dark(#0000000f, #ffffff12);
+  --line-strong: light-dark(#00000024, #ffffff24);
+  /* El "acento" es la propia tinta: botones negros en claro, blancos en oscuro */
+  --accent: var(--ink);
+  --accent-ink: light-dark(#ffffff, #111111);
+  --clean: light-dark(#2f8f57, #5fc98a);
+  --worn: light-dark(#b07a12, #e0aa45);
+  --dirty: light-dark(#c4413a, #ff6a61);
+  --clean-bg: light-dark(#2f8f5714, #5fc98a1f);
+  --worn-bg: light-dark(#b07a1214, #e0aa451f);
+  --dirty-bg: light-dark(#c4413a14, #ff6a611f);
+  --shadow-card: 0 1px 2px light-dark(#0000000a, #00000066), 0 8px 24px -12px light-dark(#0000001f, #00000099);
 
-  --font-body: 'Archivo Variable', system-ui, -apple-system, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter Variable', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(.2, .8, .2, 1);
-  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
-  --tab-h: 4rem;
+  --tab-h: 3.6rem;
 }
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark'] { color-scheme: dark; }
@@ -36,11 +39,13 @@
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-tile: var(--tile);
   --color-ink: var(--ink);
   --color-muted: var(--ink-muted);
+  --color-faint: var(--ink-faint);
   --color-line: var(--line);
-  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-clean: var(--clean);
@@ -57,87 +62,79 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
-::selection { background: var(--accent); color: var(--accent-ink); }
+::selection { background: var(--ink); color: var(--bg); }
 button, label[role='button'] { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 img { -webkit-user-drag: none; -webkit-touch-callout: none; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* Titular: Archivo estrecha y negra, mayúsculas, interlineado apretado */
-.display {
-  font-stretch: 62%;
-  font-weight: 900;
-  text-transform: uppercase;
-  line-height: .82;
-  letter-spacing: -.01em;
-}
-.display-wide { font-stretch: 125%; font-weight: 800; text-transform: uppercase; letter-spacing: -.02em; }
+/* Título de pantalla, estilo iOS "large title" */
+.title { font-size: 2rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.025em; }
+/* Etiqueta de sección (MAYÚSCULAS pequeñas, gris) */
+.section-label { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
 
-/* Etiqueta tipo SKU */
-.tag {
-  font-family: var(--font-mono);
-  font-size: .625rem;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
+/* Tarjeta y lista agrupada (inset grouped de iOS) */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-card); }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.group > * + * { border-top: 1px solid var(--line); }
 
-/* Botón que se hunde al pulsar */
+/* Pastilla de estado (como "Moderate") */
+.pill { display: inline-flex; align-items: center; gap: .375rem; height: 1.6rem; padding: 0 .6rem; border-radius: 999px; font-size: .8125rem; font-weight: 600; }
+.pill-clean { background: var(--clean-bg); color: var(--clean); }
+.pill-worn { background: var(--worn-bg); color: var(--worn); }
+.pill-dirty { background: var(--dirty-bg); color: var(--dirty); }
+
+/* Pulsación: se hunde un poco */
 .press { transition: transform .14s var(--ease-out), background-color .2s, color .2s, border-color .2s, opacity .2s; }
-.press:active { transform: scale(.95); }
+.press:active { transform: scale(.97); opacity: .85; }
 
-/* Recorte con borde blanco, como una pegatina */
-.sticker {
-  filter:
-    drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff)
-    drop-shadow(0 10px 14px rgb(0 0 0 / .22));
+/* Recorte: sombra suave de producto */
+.product-shadow { filter: drop-shadow(0 10px 14px rgb(0 0 0 / .14)); }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------- Animaciones (rápidas y discretas) ---------- */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.page-in { animation: page-in .26s var(--ease-out) both; }
+
+/* Entrada escalonada: style={{ '--i': index }} */
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .36s var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 10) * 30ms); }
+
+/* El recorte aparece */
+@keyframes reveal { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.reveal { animation: reveal .42s var(--ease-out) both; }
+
+/* Barrido de luz mientras se procesa la foto */
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.processing { position: relative; overflow: hidden; }
+.processing::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .38) 50%, transparent 80%);
+  animation: sweep 1.4s var(--ease-out) infinite;
 }
 
-/* ---------- Animaciones ---------- */
-@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.page-in { animation: page-in .28s var(--ease-out) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.toast-in { animation: toast-in .28s var(--ease-out) both; }
 
-/* Entrada escalonada de la cuadrícula: style={{ '--i': index }} */
-@keyframes rise { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
-.rise { animation: rise .42s var(--ease-out) both; animation-delay: calc(min(var(--i, 0), 12) * 35ms); }
+@keyframes pulse-dot { 50% { opacity: .35; } }
+.pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
 
-/* Cinta de texto infinita */
-@keyframes marquee { to { transform: translateX(-50%); } }
-.marquee > div { display: flex; width: max-content; animation: marquee var(--speed, 22s) linear infinite; }
-
-/* Titular que entra de golpe */
-@keyframes slam { 0% { opacity: 0; transform: scale(1.6) rotate(-4deg); } 60% { opacity: 1; transform: scale(.96) rotate(1deg); } 100% { transform: none; } }
-.slam { animation: slam .45s var(--ease-out) both; }
-
-/* Recorte que aparece como una pegatina */
-@keyframes pop { 0% { opacity: 0; transform: scale(.6) rotate(-6deg); } 70% { opacity: 1; transform: scale(1.04) rotate(1deg); } 100% { transform: none; } }
-.pop { animation: pop .5s var(--ease-spring) both; }
-
-/* Línea de escaneo mientras se quita el fondo */
-@keyframes scan { 0% { top: -10%; } 100% { top: 105%; } }
-.scan::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 18%; top: -10%;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 55%, transparent) 85%, var(--accent));
-  border-bottom: 2px solid var(--accent);
-  animation: scan 1.3s cubic-bezier(.6, 0, .4, 1) infinite alternate;
-  mix-blend-mode: hard-light;
-}
-
-@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
-.toast-in { animation: toast-in .3s var(--ease-spring) both; }
-
-@keyframes blink { 50% { opacity: .25; } }
-.blink { animation: blink 1s steps(2) infinite; }
+/* Paso del onboarding */
+@keyframes step-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.step-in { animation: step-in .32s var(--ease-out) both; }
 
 /* Transiciones entre pantallas (View Transitions, Safari 18+) */
-::view-transition-old(root) { animation: .18s var(--ease-out) both vt-out; }
-::view-transition-new(root) { animation: .26s var(--ease-out) both vt-in; }
-@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
-::view-transition-group(*) { animation-duration: .32s; animation-timing-function: var(--ease-out); }
-/* La barra inferior no participa en la transición */
+::view-transition-old(root) { animation: .16s var(--ease-out) both vt-out; }
+::view-transition-new(root) { animation: .24s var(--ease-out) both vt-in; }
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }
+::view-transition-group(*) { animation-duration: .3s; animation-timing-function: var(--ease-out); }
 nav.tabbar { view-transition-name: tabbar; }
 ::view-transition-old(tabbar), ::view-transition-new(tabbar) { animation: none; }
 
@@ -147,27 +144,21 @@ nav.tabbar { view-transition-name: tabbar; }
 
 /* Zonas seguras del iPhone (Dynamic Island y barra de inicio) */
 .pt-safe { padding-top: max(env(safe-area-inset-top), 1rem); }
-.pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 2.5rem); }
-
-.no-scrollbar { scrollbar-width: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
+.pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 1.5rem); }
 
 /* ---------- Liquid Glass (ver src/ui/LiquidGlass.tsx) — solo controles flotantes ---------- */
 .liquid-glass {
   position: relative;
   isolation: isolate;
-  /* Borde especular: luz arriba, rebote tenue abajo */
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, .45),
     inset 0 -1px 1px rgba(255, 255, 255, .1),
-    0 14px 36px -14px rgb(0 0 0 / .45);
+    0 10px 30px -12px rgb(0 0 0 / .28);
 }
-/* Brillo direccional en la parte superior */
 .liquid-glass::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, .05) 38%, transparent 60%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 38%, transparent 60%);
 }
-/* Tinte: lo justo para que el texto encima mantenga el contraste (WCAG) sea cual sea el fondo */
-.liquid-light { background: light-dark(rgb(255 255 255 / .55), rgb(28 28 28 / .5)); color: var(--ink); }
-.liquid-dark { background: rgb(12 12 12 / .8); color: #f4f4f0; }
-.liquid-dark::before { background: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .03) 40%, transparent 62%); }
+/* Tinte justo para mantener el contraste del texto encima (WCAG) */
+.liquid-light { background: light-dark(rgb(255 255 255 / .72), rgb(30 30 32 / .66)); color: var(--ink); border: 1px solid var(--line); }
+.liquid-dark { background: rgb(18 18 20 / .78); color: #f4f4f5; }

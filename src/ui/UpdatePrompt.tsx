@@ -15,10 +15,10 @@ export function UpdatePrompt() {
   if (offlineReady) setTimeout(() => setOfflineReady(false), 3000)
   if (!needRefresh && !offlineReady) return null
   return (
-    <div className="fixed inset-x-0 z-50 px-4" style={{ bottom: 'calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px)' }}>
-      <LiquidGlass tint="dark" borderRadius={30} className="toast-in mx-auto flex max-w-md items-center justify-between gap-3 py-2 pr-2 pl-5">
-        <span className="text-sm font-bold uppercase">{needRefresh ? t.update.ready : t.update.offline}</span>
-        {needRefresh && <Button variant="primary" className="min-h-10 rounded-full text-sm" onClick={() => updateServiceWorker(true)}>{t.update.reload}</Button>}
+    <div className="fixed inset-x-0 z-50 px-4" style={{ bottom: 'calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px)' }}>
+      <LiquidGlass tint="dark" borderRadius={16} className="toast-in mx-auto flex max-w-md items-center justify-between gap-3 py-2 pr-2 pl-4">
+        <span className="text-[0.9375rem] font-medium">{needRefresh ? t.update.ready : t.update.offline}</span>
+        {needRefresh && <Button variant="primary" className="min-h-10 !rounded-[10px] !bg-white !text-black text-sm" onClick={() => updateServiceWorker(true)}>{t.update.reload}</Button>}
       </LiquidGlass>
     </div>
   )

@@ -64,7 +64,7 @@ function displacementMap(w: number, h: number, radius: number, bezel: number) {
   return url
 }
 
-export function LiquidGlass({ children, className = '', borderRadius = 24, tint = 'light', refraction = 28, style, as: Tag = 'div' }: {
+export function LiquidGlass({ children, className = '', borderRadius = 24, tint = 'light', refraction = 18, style, as: Tag = 'div' }: {
   children?: ReactNode
   className?: string
   borderRadius?: number

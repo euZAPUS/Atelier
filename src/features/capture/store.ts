@@ -23,9 +23,11 @@ export interface Job {
   phase?: 'ai' | 'cutout'
   suggested?: CategoryId // categoría que propone la IA
   aiFallback?: AiError['kind'] // la IA no se pudo usar y se recortó en el móvil
+  aiUsed?: boolean // la imagen es una foto de producto generada por la IA
+  pickedAt: number // hora de la foto (para mostrarla)
 }
 
-interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[]; suggested?: CategoryId; aiFallback?: AiError['kind'] }
+interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[]; suggested?: CategoryId; aiFallback?: AiError['kind']; aiUsed?: boolean }
 type Phase = (p: { phase: 'ai' | 'cutout'; suggested?: CategoryId; aiFallback?: AiError['kind'] }) => void
 
 let job: Job | null = null
@@ -69,6 +71,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   let cut: HTMLCanvasElement | null
   let suggested: CategoryId | undefined
   let aiFallback: AiError['kind'] | undefined
+  let aiUsed = false
   if (hasTransparency(full)) {
     cut = trimTransparent(full) // ya viene recortada ("Copiar sujeto" de iOS)
   } else if (await aiConfig()) {
@@ -81,6 +84,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
       const aiCanvas = toCanvas(abmp, 1024)
       abmp.close()
       cut = await cutLocal(aiCanvas)
+      aiUsed = true
     } catch (e) {
       aiFallback = e instanceof AiError ? e.kind : 'failed'
       console.warn('IA no disponible, recorte local:', e)
@@ -95,14 +99,14 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   const cutout = await encodeAlpha(toCanvas(cut, 900))
   const thumb = await encodeAlpha(toCanvas(cut, 360), 0.8)
   const palette = extractPalette(samplePixels(cut))
-  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, aiFallback }
+  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, aiFallback, aiUsed }
 }
 
 export function startCapture(file: Blob) {
   discard()
   const id = newId()
   job = {
-    id, status: 'processing', previewUrl: URL.createObjectURL(file),
+    id, status: 'processing', previewUrl: URL.createObjectURL(file), pickedAt: Date.now(),
   }
   jobFile = file
   emit()
@@ -110,7 +114,7 @@ export function startCapture(file: Blob) {
   result = process(file, (p) => { if (job?.id === mine) set(p) })
   result.then(async (r) => {
     if (job?.id !== mine) { await applyIfSaved(mine, r); return }
-    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, suggested: r.suggested, aiFallback: r.aiFallback })
+    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, suggested: r.suggested, aiFallback: r.aiFallback, aiUsed: r.aiUsed })
     await applyIfSaved(mine, r)
   }).catch(async (e) => {
     console.error(e)
