@@ -4,8 +4,12 @@
  *
  * POST /garment  (multipart: image=<jpeg>, hint?=<categoría>)
  *   1. Un modelo de visión identifica la prenda principal y su categoría.
- *   2. FLUX.2 [klein] genera esa prenda estirada, de frente y sobre fondo blanco.
- *   → { image: <base64 jpeg/png>, category, description }
+ *   2. FLUX.2 [klein] genera esa prenda estirada, de frente y sobre un fondo neutro liso
+ *      (gris medio, blanco o negro: el que más contraste con la prenda) que la app recorta.
+ *   → { image: <base64>, key: <color del fondo>, category, description, colors }
+ *
+ * Acceso: desde la web de Atelier (Origin permitido) no hace falta contraseña. Cualquier otra
+ * llamada (scripts, curl…) necesita la cabecera X-Atelier-Key = ACCESS_KEY.
  *
  * Todo corre en Workers AI (plan gratis: 10.000 neuronas/día ≈ 75 prendas). Sin claves de API.
  * No se guarda nada: la foto entra, sale la imagen generada y se olvida.
@@ -40,9 +44,10 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
-async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ category: Category | null; description: string }> {
+async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ category: Category | null; description: string; colors: string[] }> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
@@ -57,26 +62,26 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
-    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string }
+    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown }
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
-    return { category, description: (parsed.description ?? '').slice(0, 160) }
+    const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
+    return { category, description: (parsed.description ?? '').slice(0, 160), colors }
   } catch {
-    return { category: null, description: '' }
+    return { category: null, description: '', colors: [] }
   }
 }
 
 /**
- * Color de croma para el fondo: uno que la prenda NO tenga, para recortarlo después sin errores.
- * Magenta por defecto; verde si la prenda es rosa/roja/morada; azul si además lleva verde.
+ * Fondo para la foto de producto: neutro (nada de colores chillones) y que contraste con la prenda,
+ * para poder recortarlo después. Gris medio por defecto; blanco si la prenda es gris; negro si es gris y blanca.
  */
-function pickKey(description: string): { hex: string; name: string } {
-  const d = description.toLowerCase()
-  // \b: que "collared" no cuente como "red"
-  const warm = /\b(pink|magenta|fuchsia|purple|violet|lilac|lavender|red|reddish|burgundy|maroon|rose|coral|salmon)\b/.test(d)
-  const green = /\b(green|greenish|olive|mint|khaki|lime|sage|teal)\b/.test(d)
-  if (!warm) return { hex: '#ff00ff', name: 'magenta (#FF00FF)' }
-  if (!green) return { hex: '#00ff00', name: 'chroma key green (#00FF00)' }
-  return { hex: '#0000ff', name: 'pure blue (#0000FF)' }
+function pickKey(colors: string[], description: string): { hex: string; name: string } {
+  const d = `${colors.join(' ')} ${description}`.toLowerCase()
+  const grey = /\b(grey|gray|charcoal|silver|heather)\b/.test(d)
+  const light = /\b(white|cream|ivory|off-white|light grey|light gray)\b/.test(d)
+  if (!grey) return { hex: '#808080', name: 'neutral medium grey (#808080)' }
+  if (!light) return { hex: '#ffffff', name: 'pure white (#FFFFFF)' }
+  return { hex: '#111111', name: 'deep black (#111111)' }
 }
 
 /** 2. Foto de producto: la prenda estirada, de frente, sobre un fondo de croma liso. */
@@ -86,7 +91,7 @@ function prompts(what: string, keyName: string): string[] {
   return [
     `E-commerce product photo of ${what}, exactly the same garment as in the reference image. ` +
       `Laid out flat and fully unfolded, front view, upright, symmetrical, sleeves spread, the whole garment visible and centered, ` +
-      `on a perfectly flat, uniform, solid ${keyName} background (like a chroma key screen), no gradient, no texture, no shadow on the background. ` +
+      `on a perfectly flat, uniform, solid ${keyName} seamless studio background, no gradient, no texture, no shadow on the background. ` +
       `Soft even studio light on the garment. Keep the exact colour, fabric texture, print, logos and details of the original. ` +
       `Only that single garment, nothing else in the picture. Do not add a hood, pockets, prints or details that are not in the reference.`,
     `Clean catalogue photo of the ${what} from the reference image: front view, upright, flat, centered, whole garment visible, ` +
@@ -127,7 +132,11 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
     const url = new URL(req.url)
 
-    if (env.ACCESS_KEY && req.headers.get('X-Atelier-Key') !== env.ACCESS_KEY && url.pathname !== '/health') {
+    // Desde la web de Atelier no hace falta contraseña; desde cualquier otro sitio, sí
+    const origin = req.headers.get('Origin') ?? ''
+    const fromApp = h['Access-Control-Allow-Origin'] === origin && origin !== ''
+    const keyOk = !!env.ACCESS_KEY && req.headers.get('X-Atelier-Key') === env.ACCESS_KEY
+    if (env.ACCESS_KEY && !fromApp && !keyOk && url.pathname !== '/health') {
       return json({ error: 'unauthorized' }, 401, h)
     }
     if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/ping')) {
@@ -142,10 +151,10 @@ export default {
     try {
       const bytes = new Uint8Array(await image.arrayBuffer())
       let visionError: string | undefined
-      const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '' } })
-      const key = pickKey(id.description)
+      const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '', colors: [] as string[] } })
+      const key = pickKey(id.colors, id.description)
       const shot = await productShot(env, image, id.description, key)
-      return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, visionError }, 200, h)
+      return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, colors: id.colors, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
       // Cuota diaria gratis agotada → el móvil usa el recorte local
