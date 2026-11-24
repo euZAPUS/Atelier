@@ -42,7 +42,8 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
 async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ category: Category | null; description: string }> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "description": "<colour, material, type and visible details such as prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
   let bin = ''
@@ -87,7 +88,7 @@ function prompts(what: string, keyName: string): string[] {
       `Laid out flat and fully unfolded, front view, upright, symmetrical, sleeves spread, the whole garment visible and centered, ` +
       `on a perfectly flat, uniform, solid ${keyName} background (like a chroma key screen), no gradient, no texture, no shadow on the background. ` +
       `Soft even studio light on the garment. Keep the exact colour, fabric texture, print, logos and details of the original. ` +
-      `Only that single garment, nothing else in the picture.`,
+      `Only that single garment, nothing else in the picture. Do not add a hood, pockets, prints or details that are not in the reference.`,
     `Clean catalogue photo of the ${what} from the reference image: front view, upright, flat, centered, whole garment visible, ` +
       `plain solid ${keyName} background. Same colours and details as the original.`,
     `${what}, front view, flat lay, centered, solid ${keyName} background`,
