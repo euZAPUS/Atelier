@@ -62,7 +62,7 @@ export function GarmentDetail({ id }: { id: string }) {
   const g = useLiveQuery(() => db.garments.get(id), [id], null)
   const { url, status, isCutout } = useImage(g?.imageId, 'cutout')
   const [busy, setBusy] = useState(false)
-  const aiOn = ai?.enabled === true
+  const aiOn = ai?.enabled !== false // activada por defecto
 
   if (g === null) return null // cargando
   const back = () => (history.length > 1 ? history.back() : go('/'))

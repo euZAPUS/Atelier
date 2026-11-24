@@ -44,9 +44,10 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
-async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ category: Category | null; description: string; colors: string[] }> {
+type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270 }
+async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "rotation": <how many degrees the photo must be rotated CLOCKWISE so the garment is upright, with its collar/neckline or waistband at the top: 0, 90, 180 or 270>, "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
@@ -56,18 +57,20 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
   const dataUrl = `data:image/jpeg;base64,${btoa(bin)}`
   const out = (await env.AI.run(VISION, {
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
-    max_tokens: 160,
+    max_tokens: 200,
   } as never)) as { response?: string | object }
   if (typeof out.response === 'object' && out.response) out.response = JSON.stringify(out.response)
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
-    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown }
+    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; rotation?: unknown }
+    const rot = Number(parsed.rotation)
+    const rotation = (rot === 90 || rot === 180 || rot === 270 ? rot : 0) as Identity['rotation']
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
-    return { category, description: (parsed.description ?? '').slice(0, 160), colors }
+    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation }
   } catch {
-    return { category: null, description: '', colors: [] }
+    return { category: null, description: '', colors: [], rotation: 0 }
   }
 }
 
@@ -88,15 +91,14 @@ function pickKey(colors: string[], description: string): { hex: string; name: st
 // Instrucciones para la foto de producto, de más completas a más simples. Si el filtro de seguridad del
 // modelo marca la imagen por error (pasa con algunas fotos de habitaciones), se prueba la siguiente.
 function prompts(what: string, keyName: string): string[] {
+  // Ganadores de las pruebas con fotos reales: instrucciones de EDICIÓN ("convierte esta foto…"),
+  // prohibiendo copiar texturas del entorno e inventar logos o capuchas.
   return [
-    `E-commerce product photo of ${what}, exactly the same garment as in the reference image. ` +
-      `Laid out flat and fully unfolded, front view, upright, symmetrical, sleeves spread, the whole garment visible and centered, ` +
-      `on a perfectly flat, uniform, solid ${keyName} seamless studio background, no gradient, no texture, no shadow on the background. ` +
-      `Soft even studio light on the garment. Keep the exact colour, fabric texture, print, logos and details of the original. ` +
-      `Only that single garment, nothing else in the picture. Do not add a hood, pockets, prints or details that are not in the reference.`,
-    `Clean catalogue photo of the ${what} from the reference image: front view, upright, flat, centered, whole garment visible, ` +
-      `plain solid ${keyName} background. Same colours and details as the original.`,
-    `${what}, front view, flat lay, centered, solid ${keyName} background`,
+    `Turn this photo into a professional e-commerce product photo of the ${what}. Keep only that one garment and remove everything else: bed, sheets, blankets, bags, shoes, floor. ` +
+      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, colours, collar and stripes. ` +
+      `Do not add logos, text, hoods or pockets. Do not copy patterns or textures from the surroundings onto the garment. Background: plain solid ${keyName}, evenly lit.`,
+    `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, nothing added.`,
+    `${what}, front view, flat lay, centered, plain ${keyName} background`,
   ]
 }
 
@@ -144,7 +146,7 @@ export default {
     if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/ping')) {
       return json({ ok: true, auth: url.pathname === '/ping' }, 200, h)
     }
-    if (req.method !== 'POST' || url.pathname !== '/garment') return json({ error: 'not found' }, 404, h)
+    if (req.method !== 'POST' || (url.pathname !== '/garment' && url.pathname !== '/identify')) return json({ error: 'not found' }, 404, h)
 
     const form = await req.formData()
     const image = form.get('image')
@@ -153,7 +155,17 @@ export default {
     try {
       const bytes = new Uint8Array(await image.arrayBuffer())
       let visionError: string | undefined
-      const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '', colors: [] as string[] } })
+      const fallbackId: Identity = { category: null, description: '', colors: [], rotation: 0 }
+      // /identify: solo visión (rápido). La app gira la foto si hace falta y luego llama a /garment.
+      if (url.pathname === '/identify') {
+        const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
+        return json({ ...id, visionError }, 200, h)
+      }
+      // /garment: si la app ya trae la identidad (de /identify), no se repite la visión
+      const known = form.get('description') as string | null
+      const id: Identity = known
+        ? { category: (CATEGORIES as readonly string[]).includes(String(form.get('category'))) ? (form.get('category') as Category) : null, description: known.slice(0, 160), colors: String(form.get('colors') ?? '').split(',').filter(Boolean).slice(0, 4), rotation: 0 }
+        : await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
       const key = pickKey(id.colors, id.description)
       const debug = keyOk ? { prompt: (form.get('prompt') as string | null) ?? undefined, model: (form.get('model') as string | null) ?? undefined } : undefined
       const shot = await productShot(env, image, id.description, key, debug)

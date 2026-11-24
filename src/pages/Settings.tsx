@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { fmt, useT } from '../i18n'
-import { aiPing } from '../lib/ai'
+import { aiPing, DEFAULT_AI_URL } from '../lib/ai'
 import { bgDevice, modelCached, onBgProgress, warmUp, type BgDevice } from '../lib/bg'
 import { TLink, useNav } from '../lib/nav'
 import { updateSettings, useSettings } from '../lib/settings'
@@ -49,25 +49,33 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
 function AiSection() {
   const t = useT()
   const s = useSettings()
-  const ai = s.ai ?? { enabled: false, url: '' }
-  const [test, setTest] = useState<'ok' | 'auth' | 'unreachable' | 'testing' | null>(null)
+  // Activada y con la URL de serie salvo que se cambie en "Avanzado"
+  const ai = { enabled: true, url: DEFAULT_AI_URL, ...s.ai }
+  const [test, setTest] = useState<'ok' | 'auth' | 'unreachable' | 'testing'>('testing')
   const save = (patch: Partial<typeof ai>) => updateSettings({ ai: { ...ai, ...patch } })
+  const check = async () => { setTest('testing'); setTest(await aiPing(ai.url || DEFAULT_AI_URL, ai.key)) }
+  useEffect(() => { check() }, [ai.url, ai.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const input = 'w-full min-w-0 bg-transparent text-right text-[0.9375rem] text-muted outline-none placeholder:text-faint'
+  const status = test === 'testing' ? '…' : test === 'ok' ? <span className="text-clean">{t.settings.aiOk}</span> : test === 'auth' ? <span className="text-dirty">{t.settings.aiAuth}</span> : <span className="text-dirty">{t.settings.aiUnreachable}</span>
   return (
     <Section label={t.settings.ai} footer={t.settings.aiBody}>
       <Row icon="sparkle" label={t.settings.aiEnable}><Toggle checked={ai.enabled} label={t.settings.aiEnable} onChange={(enabled) => save({ enabled })} /></Row>
-      <Row label={t.settings.aiUrl}>
-        <input key={`u${ai.url}`} defaultValue={ai.url} placeholder="https://…workers.dev" inputMode="url" autoCapitalize="off" autoCorrect="off"
-          onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() })} className={`${input} max-w-[60%]`} />
-      </Row>
-      <Row label={t.settings.aiKey}>
-        <input key={`k${ai.key}`} defaultValue={ai.key} type="password" placeholder="—" autoCapitalize="off" autoCorrect="off"
-          onBlur={(e) => e.target.value !== (ai.key ?? '') && save({ key: e.target.value || undefined })} className={`${input} max-w-[55%]`} />
-      </Row>
-      <Row label={t.settings.aiTest} onClick={ai.url ? async () => { setTest('testing'); setTest(await aiPing(ai.url, ai.key)) } : undefined}
-        value={test === 'testing' ? '…' : test === 'ok' ? <span className="text-clean">{t.settings.aiOk}</span> : test === 'auth' ? <span className="text-dirty">{t.settings.aiAuth}</span> : test === 'unreachable' ? <span className="text-dirty">{t.settings.aiUnreachable}</span> : undefined}>
-        {!test && <Icon name="chevron" size={16} className="text-faint" />}
-      </Row>
+      <Row icon="check" label={t.settings.aiStatus} value={status} onClick={check} />
+      <details className="group/adv">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-[0.9375rem] text-muted">
+          {t.settings.advanced}<Icon name="chevron" size={16} className="text-faint transition-transform group-open/adv:rotate-90" />
+        </summary>
+        <div className="border-t border-line">
+          <Row label={t.settings.aiUrl}>
+            <input key={`u${ai.url}`} defaultValue={ai.url} placeholder={DEFAULT_AI_URL} inputMode="url" autoCapitalize="off" autoCorrect="off"
+              onBlur={(e) => e.target.value.trim() !== ai.url && save({ url: e.target.value.trim() || DEFAULT_AI_URL })} className={`${input} max-w-[62%]`} />
+          </Row>
+          <Row label={t.settings.aiKey}>
+            <input key={`k${ai.key}`} defaultValue={ai.key} type="password" placeholder={t.settings.aiKeyOptional} autoCapitalize="off" autoCorrect="off"
+              onBlur={(e) => e.target.value !== (ai.key ?? '') && save({ key: e.target.value || undefined })} className={`${input} max-w-[55%]`} />
+          </Row>
+        </div>
+      </details>
     </Section>
   )
 }
