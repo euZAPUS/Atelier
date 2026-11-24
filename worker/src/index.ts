@@ -13,10 +13,11 @@
 
 export interface Env {
   AI: Ai
-  ALLOWED_ORIGINS: string
+  ALLOWED_ORIGINS?: string
   ACCESS_KEY?: string
 }
 
+const DEFAULT_ORIGINS = 'https://euzapus.github.io,http://localhost:5173,http://localhost:4173'
 const VISION = '@cf/meta/llama-4-scout-17b-16e-instruct'
 const IMAGE = '@cf/black-forest-labs/flux-2-klein-4b'
 const CATEGORIES = ['tshirts', 'longsleeves', 'hoodies', 'jackets', 'trousers', 'footwear', 'accessories'] as const
@@ -24,7 +25,8 @@ type Category = (typeof CATEGORIES)[number]
 
 function cors(req: Request, env: Env): Record<string, string> {
   const origin = req.headers.get('Origin') ?? ''
-  const allowed = env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+  // Si la variable falta (p. ej. se borró en el panel), se usan estos valores en vez de romper la función
+  const allowed = (env.ALLOWED_ORIGINS || DEFAULT_ORIGINS).split(',').map((s) => s.trim())
   return {
     'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
