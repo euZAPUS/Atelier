@@ -193,4 +193,4 @@ nav.tabbar { view-transition-name: tabbar; }
 }
 /* Tinte justo para mantener el contraste del texto encima (WCAG) */
 .liquid-light { background: light-dark(rgb(255 255 255 / .9), rgb(28 28 30 / .9)); color: var(--ink); border: 1px solid light-dark(var(--line), rgb(255 255 255 / .12)); }
-.liquid-dark { background: rgb(18 18 20 / .78); color: #f4f4f5; }
+.liquid-dark { background: rgb(14 14 16 / .94); color: #f4f4f5; }
