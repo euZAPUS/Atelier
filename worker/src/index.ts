@@ -74,6 +74,7 @@ Guide: polos have a collar with buttons and short or long sleeves in piqué; shi
   const out = (await env.AI.run((vmodel || VISION) as typeof VISION, {
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
     max_tokens: 400,
+    temperature: 0, // misma foto → misma respuesta (menos fallos al azar)
   } as never)) as { response?: string | object; choices?: { message?: { content?: string } }[] }
   // Algunos modelos responden en formato OpenAI (choices[0].message.content)
   if (!out.response && out.choices?.[0]?.message?.content) out.response = out.choices[0].message.content
