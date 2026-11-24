@@ -57,8 +57,10 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
   const dataUrl = `data:image/jpeg;base64,${btoa(bin)}`
   const out = (await env.AI.run((vmodel || VISION) as typeof VISION, {
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
-    max_tokens: 200,
-  } as never)) as { response?: string | object }
+    max_tokens: 400,
+  } as never)) as { response?: string | object; choices?: { message?: { content?: string } }[] }
+  // Algunos modelos responden en formato OpenAI (choices[0].message.content)
+  if (!out.response && out.choices?.[0]?.message?.content) out.response = out.choices[0].message.content
   if (typeof out.response === 'object' && out.response) out.response = JSON.stringify(out.response)
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
