@@ -38,7 +38,7 @@ export const es = {
     retrying: 'Recortando…', cutFailed: 'El recorte falló', archive: 'Archivar', unarchive: 'Recuperar',
     delete: 'Eliminar', confirmDelete: '¿Eliminar esta prenda para siempre?', notFound: 'Esta prenda no existe',
     statWash: 'antes de lavar', statTotal: 'veces puesta', statLast: 'último uso', days: '{n} d',
-    ownColors: 'Sus colores', matches: 'Combina con', avoid: 'Evita',
+    ownColors: 'Sus colores', matches: 'Combina con', avoid: 'Evita', matchesOwned: 'Combina con tu armario', clashesOwned: 'Mejor no con',
     details: 'Detalles', noBrand: 'Sin marca', notesPlaceholder: 'Talla, dónde la compraste, cómo lavarla…',
     washSection: 'Lavado', washNever: 'No se ensucia con el uso', washProgress: '{n} de {max} usos antes de lavar',
     dirtyManual: 'Marcar como sucia', cleanManual: 'Marcar como limpia',

@@ -40,7 +40,7 @@ export const en: Dict = {
     retrying: 'Cutting out…', cutFailed: 'The cutout failed', archive: 'Archive', unarchive: 'Restore',
     delete: 'Delete', confirmDelete: 'Delete this item forever?', notFound: 'This item does not exist',
     statWash: 'before washing', statTotal: 'times worn', statLast: 'last worn', days: '{n} d',
-    ownColors: 'Its colours', matches: 'Goes with', avoid: 'Avoid',
+    ownColors: 'Its colours', matches: 'Goes with', avoid: 'Avoid', matchesOwned: 'Goes with your wardrobe', clashesOwned: 'Better not with',
     details: 'Details', noBrand: 'No brand', notesPlaceholder: 'Size, where you bought it, how to wash it…',
     washSection: 'Washing', washNever: 'Does not get dirty with wear', washProgress: '{n} of {max} wears before washing',
     dirtyManual: 'Mark as dirty', cleanManual: 'Mark as clean',

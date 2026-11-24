@@ -8,6 +8,7 @@ import { clashesFor, matchesFor } from '../domain/harmony'
 import { colorLabel, displayName } from '../domain/naming'
 import { garmentStatus } from '../domain/wash'
 import { reprocess } from '../features/capture/store'
+import { MatchRow } from '../features/wardrobe/MatchRow'
 import { fmt, useT } from '../i18n'
 import { useNav } from '../lib/nav'
 import { useSettings } from '../lib/settings'
@@ -169,6 +170,8 @@ export function GarmentDetail({ id }: { id: string }) {
                 <div className="flex gap-2">{clashes.map((c) => <Swatch key={c} hex={hexOf(c)} label={colorLabel(c, lang)} crossed />)}</div>
               </div>
             )}
+            <MatchRow g={g} label={t.garment.matchesOwned} />
+            <MatchRow g={g} label={t.garment.clashesOwned} clash />
           </section>
         )}
 

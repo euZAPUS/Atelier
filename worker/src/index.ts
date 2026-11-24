@@ -44,8 +44,8 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
-type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270 }
-async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<Identity> {
+type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; raw?: string }
+async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
@@ -55,7 +55,7 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   const dataUrl = `data:image/jpeg;base64,${btoa(bin)}`
-  const out = (await env.AI.run(VISION, {
+  const out = (await env.AI.run((vmodel || VISION) as typeof VISION, {
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
     max_tokens: 200,
   } as never)) as { response?: string | object }
@@ -69,7 +69,7 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
     const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
-    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation }
+    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation, raw: text.slice(0, 400) }
   } catch {
     return { category: null, description: '', colors: [], rotation: 0 }
   }
@@ -159,8 +159,9 @@ export default {
       const fallbackId: Identity = { category: null, description: '', colors: [], rotation: 0 }
       // /identify: solo visión (rápido). La app gira la foto si hace falta y luego llama a /garment.
       if (url.pathname === '/identify') {
-        const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
-        return json({ ...id, visionError }, 200, h)
+        const vmodel = keyOk ? ((form.get('vmodel') as string | null) ?? undefined) : undefined
+        const { raw, ...id } = await identify(env, bytes, hint, vmodel).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
+        return json({ ...id, visionError, ...(keyOk ? { raw } : {}) }, 200, h)
       }
       // /garment: si la app ya trae la identidad (de /identify), no se repite la visión
       const known = form.get('description') as string | null
