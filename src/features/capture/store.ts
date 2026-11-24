@@ -5,10 +5,10 @@ import { db, newId } from '../../db/db'
 import type { ColorInfo, Garment } from '../../db/types'
 import { categoryById, type CategoryId } from '../../domain/categories'
 import { extractPalette, nameWithWords } from '../../domain/color'
-import { AiError, aiConfig, productShot } from '../../lib/ai'
+import { AiError, aiConfig, aiIdentify, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
 import { keyOut } from '../../lib/chroma'
-import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
+import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, rotateCanvas, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
 
 export type JobStatus = 'processing' | 'ready' | 'failed'
 
@@ -66,63 +66,6 @@ async function cutLocal(src: HTMLCanvasElement) {
   return trimTransparent((await segment(src)).cut)
 }
 
-/**
- * Imagen que se envía a la IA: solo la zona de la prenda, con un margen, sobre gris liso.
- * Sin sábanas ni mantas alrededor, el modelo de imagen no mezcla el fondo con la prenda.
- * La máscara se agranda un poco para que, si el recorte local se queda corto, la IA vea la prenda entera.
- * null si el recorte local no parece fiable (entonces se envía la foto completa).
- */
-function prepareForAi(work: HTMLCanvasElement, cut: HTMLCanvasElement) {
-  const S = 256
-  const small = toCanvas(cut, S)
-  const sw = small.width, sh = small.height
-  const a = small.getContext('2d')!.getImageData(0, 0, sw, sh).data
-  const m = new Uint8Array(sw * sh)
-  let x0 = sw, y0 = sh, x1 = -1, y1 = -1, on = 0
-  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
-    if (a[(y * sw + x) * 4 + 3] > 60) { m[y * sw + x] = 1; on++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y }
-  }
-  const cover = on / (sw * sh)
-  if (cover < 0.03 || cover > 0.95) return null
-  // Dilatación (máximo en un cuadrado de radio r): la máscara crece ~2,5 %
-  const r = 6
-  const tmp = new Uint8Array(sw * sh), dil = new Uint8Array(sw * sh)
-  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
-    let v = 0
-    for (let k = Math.max(0, x - r); k <= Math.min(sw - 1, x + r) && !v; k++) v = m[y * sw + k]
-    tmp[y * sw + x] = v
-  }
-  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
-    let v = 0
-    for (let k = Math.max(0, y - r); k <= Math.min(sh - 1, y + r) && !v; k++) v = tmp[k * sw + x]
-    dil[y * sw + x] = v
-  }
-  const mc = document.createElement('canvas')
-  mc.width = sw; mc.height = sh
-  const md = mc.getContext('2d')!.createImageData(sw, sh)
-  for (let i = 0; i < sw * sh; i++) { md.data[i * 4 + 3] = dil[i] ? 255 : 0 }
-  mc.getContext('2d')!.putImageData(md, 0, 0)
-  // Recorte a la zona de la prenda con margen (en coordenadas de la imagen de trabajo)
-  const k = work.width / sw
-  const pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.08)
-  const bx = Math.max(0, (x0 - pad) * k), by = Math.max(0, (y0 - pad) * k)
-  const bw = Math.min(work.width, (x1 + pad + 1) * k) - bx, bh = Math.min(work.height, (y1 + pad + 1) * k) - by
-  const garment = document.createElement('canvas')
-  garment.width = work.width; garment.height = work.height
-  const g = garment.getContext('2d')!
-  g.drawImage(work, 0, 0)
-  g.globalCompositeOperation = 'destination-in'
-  g.imageSmoothingEnabled = true
-  g.drawImage(mc, 0, 0, work.width, work.height) // máscara ampliada: bordes suaves
-  const out = document.createElement('canvas')
-  out.width = Math.round(bw); out.height = Math.round(bh)
-  const o = out.getContext('2d')!
-  o.fillStyle = '#8a8a8a'
-  o.fillRect(0, 0, out.width, out.height)
-  o.drawImage(garment, bx, by, bw, bh, 0, 0, out.width, out.height)
-  return out
-}
-
 /** Recorte del fondo liso de la imagen de la IA. null si el resultado no es creíble (se usa el recorte local). */
 function cutPlain(src: HTMLCanvasElement) {
   const c = toCanvas(src, 1024)
@@ -143,7 +86,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   const bmp = await decode(file)
   const full = toCanvas(bmp, 1600)
   bmp.close()
-  const original = await canvasToBlob(full, 'image/jpeg', 0.82)
+  let original = await canvasToBlob(full, 'image/jpeg', 0.82)
   let cut: HTMLCanvasElement | null
   let suggested: CategoryId | undefined
   let aiFallback: AiError['kind'] | undefined
@@ -153,11 +96,20 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
     cut = trimTransparent(full) // ya viene recortada ("Copiar sujeto" de iOS)
   } else if (await aiConfig()) {
     onPhase({ phase: 'ai' })
-    // Primero el recorte local: aísla la prenda para la IA y sirve de plan B si la IA falla
-    const seg = await segment(full).catch(() => null)
-    const prepared = seg && prepareForAi(seg.work, seg.cut)
+    let src = full
     try {
-      const ai = await productShot(await canvasToBlob(prepared ?? toCanvas(full, 1024), 'image/jpeg', 0.9), hint)
+      // 1. Qué prenda es y si la foto está girada (rápido)
+      const id = await aiIdentify(await canvasToBlob(toCanvas(full, 768), 'image/jpeg', 0.85), hint).catch((e) => {
+        if (e instanceof AiError && e.kind !== 'failed') throw e // sin conexión / sin cuota: directo al plan B
+        return null
+      })
+      if (id?.rotation) {
+        src = rotateCanvas(full, id.rotation) // la prenda, derecha (cuello arriba)
+        original = await canvasToBlob(src, 'image/jpeg', 0.82)
+      }
+      if (id?.category) onPhase({ phase: 'ai', suggested: id.category })
+      // 2. Foto de producto sobre fondo neutro
+      const ai = await productShot(await canvasToBlob(toCanvas(src, 1024), 'image/jpeg', 0.9), hint, id)
       suggested = ai.category ?? undefined
       onPhase({ phase: 'cutout', suggested })
       const abmp = await decode(ai.image)
@@ -170,7 +122,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
       aiFallback = e instanceof AiError ? e.kind : 'failed'
       console.warn('IA no disponible, recorte local:', e)
       onPhase({ phase: 'cutout', aiFallback })
-      cut = seg ? trimTransparent(seg.cut) : await cutLocal(full)
+      cut = await cutLocal(src)
     }
   } else {
     onPhase({ phase: 'cutout' })

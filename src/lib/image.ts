@@ -76,3 +76,17 @@ export function centerCrop(c: HTMLCanvasElement, frac = 0.5) {
   out.getContext('2d')!.drawImage(c, (c.width - out.width) / 2, (c.height - out.height) / 2, out.width, out.height, 0, 0, out.width, out.height)
   return out
 }
+
+/** Gira la imagen en sentido horario (90, 180 o 270 grados). */
+export function rotateCanvas(src: HTMLCanvasElement, deg: 0 | 90 | 180 | 270) {
+  if (!deg) return src
+  const c = document.createElement('canvas')
+  const swap = deg === 90 || deg === 270
+  c.width = swap ? src.height : src.width
+  c.height = swap ? src.width : src.height
+  const ctx = c.getContext('2d')!
+  ctx.translate(c.width / 2, c.height / 2)
+  ctx.rotate((deg * Math.PI) / 180)
+  ctx.drawImage(src, -src.width / 2, -src.height / 2)
+  return c
+}

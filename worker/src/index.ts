@@ -47,7 +47,7 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
 type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270 }
 async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "rotation": <how many degrees the photo must be rotated CLOCKWISE so the garment is upright, with its collar/neckline or waistband at the top: 0, 90, 180 or 270>, "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
@@ -63,9 +63,10 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
-    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; rotation?: unknown }
-    const rot = Number(parsed.rotation)
-    const rotation = (rot === 90 || rot === 180 || rot === 270 ? rot : 0) as Identity['rotation']
+    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; neckline?: unknown }
+    // Giro horario para dejar el cuello arriba (los modelos de visión aciertan mejor "dónde está" que "cuántos grados")
+    const side = String(parsed.neckline ?? 'top').toLowerCase()
+    const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
     return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation }

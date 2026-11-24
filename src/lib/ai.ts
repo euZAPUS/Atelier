@@ -21,8 +21,59 @@ export async function aiConfig() {
 
 const endpoint = (url: string, path: string) => url.replace(/\/+$/, '') + path
 
-/** Envía la foto (ya reducida) y devuelve la foto de producto generada. */
-export async function productShot(photo: Blob, hint?: string): Promise<AiResult> {
+export interface AiIdentity { category: CategoryId | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270 }
+
+async function post(path: string, form: FormData, timeoutMs: number) {
+  const cfg = await aiConfig()
+  if (!cfg) throw new AiError('off')
+  if (!navigator.onLine) throw new AiError('offline')
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(endpoint(cfg.url, path), { method: 'POST', body: form, signal: ctrl.signal, headers: cfg.key ? { 'X-Atelier-Key': cfg.key } : undefined })
+    const data = await res.json().catch(() => ({}))
+    if (res.status === 401) throw new AiError('auth')
+    if (res.status === 429 || data.error === 'quota') throw new AiError('quota', data.detail)
+    if (!res.ok) throw new AiError('failed', data.detail ?? `HTTP ${res.status}`)
+    return data
+  } catch (e) {
+    if (e instanceof AiError) throw e
+    throw new AiError('failed', String((e as Error)?.message ?? e))
+  } finally { clearTimeout(timer) }
+}
+
+/** Paso 1 (rápido): qué prenda es, sus colores y si la foto hay que girarla. */
+export async function aiIdentify(photo: Blob, hint?: string): Promise<AiIdentity> {
+  const form = new FormData()
+  form.append('image', photo, 'photo.jpg')
+  if (hint) form.append('hint', hint)
+  const d = await post('/identify', form, 25_000)
+  return { category: d.category ?? null, description: d.description ?? '', colors: d.colors ?? [], rotation: [90, 180, 270].includes(d.rotation) ? d.rotation : 0 }
+}
+
+/** Paso 2: foto de producto. Si ya se conoce la prenda (paso 1), no se vuelve a analizar. */
+export async function productShot(photo: Blob, hint?: string, id?: AiIdentity | null): Promise<AiResult> {
+  if (id?.description) {
+    const form = new FormData()
+    form.append('image', photo, 'photo.jpg')
+    form.append('description', id.description)
+    form.append('colors', id.colors.join(','))
+    if (id.category) form.append('category', id.category)
+    const d = await post('/garment', form, 60_000)
+    if (!d.image) throw new AiError('failed', 'sin imagen')
+    return { image: b64ToBlob(d.image), category: id.category, description: id.description, key: d.key, colors: id.colors }
+  }
+  return productShotOneStep(photo, hint)
+}
+
+function b64ToBlob(b64: string) {
+  const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+  const type = bin[0] === 0x89 ? 'image/png' : bin[0] === 0x52 ? 'image/webp' : 'image/jpeg'
+  return new Blob([bin], { type })
+}
+
+/** Una sola llamada (visión + imagen en el servidor). */
+async function productShotOneStep(photo: Blob, hint?: string): Promise<AiResult> {
   const cfg = await aiConfig()
   if (!cfg) throw new AiError('off')
   if (!navigator.onLine) throw new AiError('offline')
