@@ -22,7 +22,8 @@ export interface Env {
 }
 
 const DEFAULT_ORIGINS = 'https://euzapus.github.io,http://localhost:5173,http://localhost:4173'
-const VISION = '@cf/meta/llama-4-scout-17b-16e-instruct'
+// Mistral Small 3.1: en las pruebas con fotos reales fue el más rápido (~1,5 s) y el único que ubica bien el cuello
+const VISION = '@cf/mistralai/mistral-small-3.1-24b-instruct'
 const IMAGE = '@cf/black-forest-labs/flux-2-klein-4b'
 const CATEGORIES = ['tshirts', 'longsleeves', 'hoodies', 'jackets', 'trousers', 'footwear', 'accessories'] as const
 type Category = (typeof CATEGORIES)[number]
@@ -44,7 +45,7 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
-type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; raw?: string }
+type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean; raw?: string }
 async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
@@ -69,9 +70,11 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
     // Giro horario para dejar el cuello arriba (los modelos de visión aciertan mejor "dónde está" que "cuántos grados")
     const side = String(parsed.neckline ?? 'top').toLowerCase()
     const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
+    // De lado, los modelos confunden izquierda y derecha: la app gira 90° y vuelve a preguntar (arriba/abajo sí lo aciertan)
+    const sideways = rotation === 90 || rotation === 270
     const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
-    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation, raw: text.slice(0, 400) }
+    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation, sideways, raw: text.slice(0, 400) }
   } catch {
     return { category: null, description: '', colors: [], rotation: 0 }
   }

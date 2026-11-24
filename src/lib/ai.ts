@@ -21,7 +21,7 @@ export async function aiConfig() {
 
 const endpoint = (url: string, path: string) => url.replace(/\/+$/, '') + path
 
-export interface AiIdentity { category: CategoryId | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270 }
+export interface AiIdentity { category: CategoryId | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean }
 
 async function post(path: string, form: FormData, timeoutMs: number) {
   const cfg = await aiConfig()
@@ -48,7 +48,7 @@ export async function aiIdentify(photo: Blob, hint?: string): Promise<AiIdentity
   form.append('image', photo, 'photo.jpg')
   if (hint) form.append('hint', hint)
   const d = await post('/identify', form, 25_000)
-  return { category: d.category ?? null, description: d.description ?? '', colors: d.colors ?? [], rotation: [90, 180, 270].includes(d.rotation) ? d.rotation : 0 }
+  return { category: d.category ?? null, description: d.description ?? '', colors: d.colors ?? [], rotation: [90, 180, 270].includes(d.rotation) ? d.rotation : 0, sideways: !!d.sideways }
 }
 
 /** Paso 2: foto de producto. Si ya se conoce la prenda (paso 1), no se vuelve a analizar. */

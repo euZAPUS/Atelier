@@ -27,7 +27,7 @@ export const es = {
     pickCategory: 'Categoría', color: 'Color',
     saved: 'Guardada en tu armario', another: 'Otra', viewWardrobe: 'Ver armario',
     background: 'El recorte acabará en segundo plano', cancel: 'Descartar',
-    aiWorking: 'La IA está preparando la foto de producto', suggested: 'Sugerida',
+    aiWorking: 'La IA está preparando la foto de producto', rotate: 'Girar', retry: 'Repetir', suggested: 'Sugerida',
     fallback: { off: '', offline: 'Sin conexión: recortada en el móvil', quota: 'Cuota de IA de hoy agotada: recortada en el móvil', auth: 'Clave de IA incorrecta: recortada en el móvil', failed: 'La IA falló: recortada en el móvil' },
   },
   garment: {

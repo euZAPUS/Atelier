@@ -29,7 +29,7 @@ export const en: Dict = {
     pickCategory: 'Category', color: 'Colour',
     saved: 'Saved to your wardrobe', another: 'Another', viewWardrobe: 'View closet',
     background: 'The cutout will finish in the background', cancel: 'Discard',
-    aiWorking: 'AI is preparing the product photo', suggested: 'Suggested',
+    aiWorking: 'AI is preparing the product photo', rotate: 'Rotate', retry: 'Retry', suggested: 'Suggested',
     fallback: { off: '', offline: 'Offline: cut out on the phone', quota: "Today's AI quota is used up: cut out on the phone", auth: 'Wrong AI key: cut out on the phone', failed: 'AI failed: cut out on the phone' },
   },
   garment: {

@@ -99,12 +99,19 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
     let src = full
     try {
       // 1. Qué prenda es y si la foto está girada (rápido)
-      const id = await aiIdentify(await canvasToBlob(toCanvas(full, 768), 'image/jpeg', 0.85), hint).catch((e) => {
+      const ask = (c: HTMLCanvasElement) => canvasToBlob(toCanvas(c, 768), 'image/jpeg', 0.85).then((b) => aiIdentify(b, hint)).catch((e) => {
         if (e instanceof AiError && e.kind !== 'failed') throw e // sin conexión / sin cuota: directo al plan B
         return null
       })
-      if (id?.rotation) {
-        src = rotateCanvas(full, id.rotation) // la prenda, derecha (cuello arriba)
+      let id = await ask(full)
+      let rotation = id?.rotation ?? 0
+      if (id?.sideways) {
+        // De lado no se sabe si es a izquierda o derecha: se gira 90° y se pregunta otra vez (arriba/abajo sí lo acierta)
+        const again = await ask(rotateCanvas(full, 90))
+        if (again) { rotation = again.rotation === 180 ? 270 : 90; id = again }
+      }
+      if (rotation) {
+        src = rotateCanvas(full, rotation) // la prenda, derecha (cuello arriba)
         original = await canvasToBlob(src, 'image/jpeg', 0.82)
       }
       if (id?.category) onPhase({ phase: 'ai', suggested: id.category })
@@ -207,6 +214,19 @@ export async function saveJob(category: CategoryId, color?: ColorInfo): Promise<
   if (j.status === 'failed') { savedJobs.set(j.id, gid); await markFailed(j.id, file) }
   else if (!ready) savedJobs.set(j.id, gid)
   return gid
+}
+
+/** Vuelve a procesar la foto actual; con `rotate`, girada 90° en sentido horario. */
+export async function retryJob(rotate: boolean) {
+  if (!jobFile || job?.savedId) return
+  let file = jobFile
+  if (rotate) {
+    const bmp = await decode(file)
+    const c = rotateCanvas(toCanvas(bmp, 2048), 90)
+    bmp.close()
+    file = await canvasToBlob(c, 'image/jpeg', 0.92)
+  }
+  startCapture(file)
 }
 
 export function discard() {

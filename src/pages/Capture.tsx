@@ -3,7 +3,7 @@ import type { ColorInfo } from '../db/types'
 import { CATEGORIES, type CategoryId } from '../domain/categories'
 import { colorLabel, displayName } from '../domain/naming'
 import { CaptureInput } from '../features/capture/CaptureInput'
-import { discard, PENDING_COLOR, saveJob, startCapture, useJob, type Job } from '../features/capture/store'
+import { discard, PENDING_COLOR, retryJob, saveJob, startCapture, useJob, type Job } from '../features/capture/store'
 import { useT } from '../i18n'
 import { onBgProgress, type BgProgress } from '../lib/bg'
 import { useNav } from '../lib/nav'
@@ -92,7 +92,17 @@ function PhotoCard({ job }: { job: Job }) {
       <div className="flex items-center gap-2 px-4 py-3 text-[0.875rem]">
         {job.status === 'processing' && <span className="pulse-dot size-2 shrink-0 rounded-full bg-ink" />}
         {job.status === 'ready' && <Icon name="check" size={16} strokeWidth={2.2} className={job.aiFallback ? 'text-worn' : 'text-clean'} />}
-        <span className={job.status === 'failed' ? 'text-dirty' : 'text-muted'}>{status}</span>
+        <span className={`min-w-0 flex-1 truncate ${job.status === 'failed' ? 'text-dirty' : 'text-muted'}`}>{status}</span>
+        {job.status !== 'processing' && (
+          <div className="flex shrink-0 gap-1">
+            <button onClick={() => retryJob(true)} className="press inline-flex h-8 items-center gap-1 rounded-full bg-surface-2 px-2.5 text-[0.8125rem] font-medium">
+              <Icon name="rotate" size={15} strokeWidth={1.8} />{t.capture.rotate}
+            </button>
+            <button onClick={() => retryJob(false)} className="press inline-flex h-8 items-center gap-1 rounded-full bg-surface-2 px-2.5 text-[0.8125rem] font-medium">
+              <Icon name="refresh" size={15} strokeWidth={1.8} />{t.capture.retry}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
