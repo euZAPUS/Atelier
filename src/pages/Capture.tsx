@@ -114,7 +114,7 @@ function ColorRow({ job, value, onChange }: { job: Job; value?: ColorInfo; onCha
               style={{ background: c.hex }} />
           ))}
         </div>
-        <span className="ml-auto text-[0.9375rem] font-medium capitalize">{colorLabel(current.name, lang)}</span>
+        <span className="ml-auto text-[0.9375rem] font-medium first-letter:uppercase">{colorLabel(current.name, lang)}</span>
       </div>
     </section>
   )

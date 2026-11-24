@@ -3,7 +3,7 @@
 import { db } from '../db/db'
 import type { CategoryId } from '../domain/categories'
 
-export interface AiResult { image: Blob; category: CategoryId | null; description: string }
+export interface AiResult { image: Blob; category: CategoryId | null; description: string; key?: string }
 export class AiError extends Error {
   constructor(public kind: 'off' | 'offline' | 'quota' | 'auth' | 'failed', detail?: string) { super(detail ?? kind) }
 }
@@ -30,13 +30,13 @@ export async function productShot(photo: Blob, hint?: string): Promise<AiResult>
       method: 'POST', body: form, signal: ctrl.signal,
       headers: cfg.key ? { 'X-Atelier-Key': cfg.key } : undefined,
     })
-    const data = (await res.json().catch(() => ({}))) as { image?: string; category?: CategoryId | null; description?: string; error?: string; detail?: string }
+    const data = (await res.json().catch(() => ({}))) as { image?: string; key?: string; category?: CategoryId | null; description?: string; error?: string; detail?: string }
     if (res.status === 401) throw new AiError('auth')
     if (res.status === 429 || data.error === 'quota') throw new AiError('quota', data.detail)
     if (!res.ok || !data.image) throw new AiError('failed', data.detail ?? `HTTP ${res.status}`)
     const bin = Uint8Array.from(atob(data.image), (c) => c.charCodeAt(0))
     const type = bin[0] === 0x89 ? 'image/png' : bin[0] === 0x52 ? 'image/webp' : 'image/jpeg'
-    return { image: new Blob([bin], { type }), category: data.category ?? null, description: data.description ?? '' }
+    return { image: new Blob([bin], { type }), category: data.category ?? null, description: data.description ?? '', key: data.key }
   } catch (e) {
     if (e instanceof AiError) throw e
     throw new AiError('failed', String((e as Error)?.message ?? e))

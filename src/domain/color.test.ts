@@ -21,6 +21,9 @@ describe('color', () => {
     expect(nameColor(rgbToLab(30, 38, 70))).toBe('navy')
     expect(nameColor(rgbToLab(80, 108, 140))).toBe('denim')
     expect(nameColor(rgbToLab(200, 160, 45))).toBe('mustard')
+    // la sudadera rugby verde de la prueba real (salía 'gris marengo')
+    expect(nameColor(rgbToLab(47, 74, 64))).toBe('darkgreen')
+    expect(nameColor(rgbToLab(61, 61, 63))).toBe('charcoal')
   })
   it('principal = el que más ocupa; ignora el fondo transparente', () => {
     const p = extractPalette(pixels([['#1c2340', 700], ['#f4f4f2', 200], ['#c32a2a', 100]], 5000))

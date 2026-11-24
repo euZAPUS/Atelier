@@ -43,7 +43,7 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
 async function identify(env: Env, bytes: Uint8Array, hint?: string): Promise<{ category: Category | null; description: string }> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "description": "<colour, material, type and visible details such as prints or logos, max 18 words>"}
-Category guide: tshirts = short sleeve tops; longsleeves = long sleeve tees/shirts; hoodies = sweatshirts, hoodies AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
+Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
@@ -64,12 +64,26 @@ Category guide: tshirts = short sleeve tops; longsleeves = long sleeve tees/shir
   }
 }
 
-/** 2. Foto de producto: la prenda estirada, de frente, sobre blanco. */
-async function productShot(env: Env, image: Blob, description: string): Promise<string> {
+/**
+ * Color de croma para el fondo: uno que la prenda NO tenga, para recortarlo después sin errores.
+ * Magenta por defecto; verde si la prenda es rosa/roja/morada; azul si además lleva verde.
+ */
+export function pickKey(description: string): { hex: string; name: string } {
+  const d = description.toLowerCase()
+  const warm = /pink|magenta|fuchsia|purple|violet|lilac|lavender|red|burgundy|maroon|rose|coral|salmon/.test(d)
+  const green = /green|olive|mint|khaki|lime|sage|teal/.test(d)
+  if (!warm) return { hex: '#ff00ff', name: 'magenta (#FF00FF)' }
+  if (!green) return { hex: '#00ff00', name: 'chroma key green (#00FF00)' }
+  return { hex: '#0000ff', name: 'pure blue (#0000FF)' }
+}
+
+/** 2. Foto de producto: la prenda estirada, de frente, sobre un fondo de croma liso. */
+async function productShot(env: Env, image: Blob, description: string, key: { name: string }): Promise<string> {
   const what = description || 'the main garment'
   const prompt = `E-commerce product photo of ${what}, exactly the same garment as in the reference image. ` +
     `Laid out flat and fully unfolded, front view, symmetrical, sleeves spread, the whole garment visible and centered, ` +
-    `on a pure white seamless background, soft even studio light, no shadows on the background. ` +
+    `on a perfectly flat, uniform, solid ${key.name} background (like a chroma key screen), no gradient, no texture, no shadow on the background. ` +
+    `Soft even studio light on the garment. ` +
     `Keep the exact colour, fabric texture, print, logos and details of the original. ` +
     `Only that single garment: no bed, no floor, no shoes, no hands, no people, no hanger, no other objects.`
   const form = new FormData()
@@ -106,8 +120,9 @@ export default {
       const bytes = new Uint8Array(await image.arrayBuffer())
       let visionError: string | undefined
       const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '' } })
-      const shot = await productShot(env, image, id.description)
-      return json({ image: shot, category: id.category, description: id.description, visionError }, 200, h)
+      const key = pickKey(id.description)
+      const shot = await productShot(env, image, id.description, key)
+      return json({ image: shot, key: key.hex, category: id.category, description: id.description, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
       // Cuota diaria gratis agotada → el móvil usa el recorte local

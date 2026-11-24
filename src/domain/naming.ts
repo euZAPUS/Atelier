@@ -16,6 +16,7 @@ const COLOR_NAMES: Record<string, { es: [string, string]; en: string }> = {
   brown: { es: ['marrón', 'marrón'], en: 'brown' },
   khaki: { es: ['caqui', 'caqui'], en: 'khaki' },
   olive: { es: ['verde oliva', 'verde oliva'], en: 'olive' },
+  darkgreen: { es: ['verde botella', 'verde botella'], en: 'bottle green' },
   green: { es: ['verde', 'verde'], en: 'green' },
   mint: { es: ['verde menta', 'verde menta'], en: 'mint' },
   teal: { es: ['verde azulado', 'verde azulado'], en: 'teal' },

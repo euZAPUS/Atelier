@@ -7,6 +7,7 @@ import { categoryById, type CategoryId } from '../../domain/categories'
 import { extractPalette } from '../../domain/color'
 import { AiError, aiConfig, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
+import { chromaKey, hexToRgb } from '../../lib/chroma'
 import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
 
 export type JobStatus = 'processing' | 'ready' | 'failed'
@@ -58,6 +59,17 @@ async function cutLocal(src: HTMLCanvasElement) {
   return trimTransparent(cc)
 }
 
+/** Recorte por croma de la imagen de la IA. null si el resultado no es creíble (se usa el recorte local). */
+function cutChroma(src: HTMLCanvasElement, keyHex: string) {
+  const c = toCanvas(src, 1024)
+  const ctx = c.getContext('2d', { willReadFrequently: true })!
+  const img = ctx.getImageData(0, 0, c.width, c.height)
+  const cover = chromaKey(img.data, c.width, c.height, hexToRgb(keyHex))
+  if (cover < 0.04 || cover > 0.92) return null // no había un fondo de croma de verdad
+  ctx.putImageData(img, 0, 0)
+  return trimTransparent(c)
+}
+
 /**
  * Procesa una foto: recorte, miniatura y color.
  * Con la IA activada, primero se genera una foto de producto (prenda estirada, de frente, fondo blanco)
@@ -83,7 +95,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
       const abmp = await decode(ai.image)
       const aiCanvas = toCanvas(abmp, 1024)
       abmp.close()
-      cut = await cutLocal(aiCanvas)
+      cut = (ai.key && cutChroma(aiCanvas, ai.key)) || (await cutLocal(aiCanvas))
       aiUsed = true
     } catch (e) {
       aiFallback = e instanceof AiError ? e.kind : 'failed'

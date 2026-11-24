@@ -40,7 +40,7 @@ export const NAMED_COLORS: { id: string; hex: string }[] = [
   { id: 'black', hex: '#141414' }, { id: 'charcoal', hex: '#3d3d3f' }, { id: 'grey', hex: '#8a8a8a' },
   { id: 'lightgrey', hex: '#c9c9c7' }, { id: 'white', hex: '#f4f4f2' }, { id: 'cream', hex: '#ece3cf' },
   { id: 'beige', hex: '#d3bf9e' }, { id: 'camel', hex: '#b5864f' }, { id: 'brown', hex: '#6a4a30' },
-  { id: 'khaki', hex: '#8f8a5e' }, { id: 'olive', hex: '#5a5c32' }, { id: 'green', hex: '#2f7a3d' },
+  { id: 'khaki', hex: '#8f8a5e' }, { id: 'olive', hex: '#5a5c32' }, { id: 'darkgreen', hex: '#24443a' }, { id: 'green', hex: '#2f7a3d' },
   { id: 'mint', hex: '#a8d8bd' }, { id: 'teal', hex: '#1f7f7c' }, { id: 'navy', hex: '#1c2340' },
   { id: 'blue', hex: '#2b5cb0' }, { id: 'denim', hex: '#4c6a8e' }, { id: 'lightblue', hex: '#9ec4e6' },
   { id: 'purple', hex: '#5d3a86' }, { id: 'lilac', hex: '#b9a5d8' }, { id: 'pink', hex: '#f0a8c0' },

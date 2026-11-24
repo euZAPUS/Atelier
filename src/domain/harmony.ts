@@ -14,6 +14,7 @@ export const MATCHES: Record<string, string[]> = {
   brown: ['cream', 'beige', 'white', 'denim', 'olive', 'lightblue'],
   khaki: ['white', 'navy', 'black', 'denim', 'brown', 'cream'],
   olive: ['white', 'cream', 'black', 'beige', 'denim', 'mustard'],
+  darkgreen: ['white', 'cream', 'beige', 'camel', 'navy', 'denim'],
   green: ['white', 'beige', 'navy', 'denim', 'cream', 'black'],
   mint: ['white', 'navy', 'grey', 'beige', 'denim', 'lightgrey'],
   teal: ['white', 'beige', 'navy', 'grey', 'mustard', 'black'],
@@ -36,6 +37,7 @@ export const MATCHES: Record<string, string[]> = {
 /** Parejas que chocan (en los dos sentidos). */
 export const CLASHES: [string, string][] = [
   ['red', 'green'],
+  ['red', 'darkgreen'],
   ['beige', 'mustard'],
   ['orange', 'fuchsia'],
   ['red', 'pink'],
