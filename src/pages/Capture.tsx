@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ColorInfo } from '../db/types'
-import { CATEGORIES, type CategoryId } from '../domain/categories'
-import { colorLabel, displayName } from '../domain/naming'
+import { CATEGORIES, typeById, type CategoryId } from '../domain/categories'
+import { colorLabel, displayName, typeLabel } from '../domain/naming'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { discard, PENDING_COLOR, retryJob, saveJob, startCapture, useJob, type Job } from '../features/capture/store'
 import { useT } from '../i18n'
@@ -12,9 +12,6 @@ import { buttonBase, buttonStyles } from '../ui/Button'
 import { Icon, type IconName } from '../ui/Icon'
 import { HeaderPill, NavButton, PageHeader } from '../ui/PageHeader'
 
-const ICON: Record<CategoryId, IconName> = {
-  tshirts: 'tshirt', longsleeves: 'longsleeve', hoodies: 'hoodie', jackets: 'jacket', trousers: 'trousers', footwear: 'shoe', accessories: 'cap',
-}
 
 function useBgProgress() {
   const [p, setP] = useState<BgProgress | null>(null)
@@ -130,8 +127,9 @@ function ColorRow({ job, value, onChange }: { job: Job; value?: ColorInfo; onCha
   )
 }
 
-function Categories({ onPick, suggested, disabled }: { onPick: (c: CategoryId) => void; suggested?: CategoryId; disabled: boolean }) {
+function Categories({ onPick, suggested, suggestedType, disabled }: { onPick: (c: CategoryId) => void; suggested?: CategoryId; suggestedType?: string; disabled: boolean }) {
   const t = useT()
+  const { lang } = useSettings()
   return (
     <section className="mt-5">
       <h2 className="section-label mb-2 px-1">{t.capture.pickCategory}</h2>
@@ -142,10 +140,14 @@ function Categories({ onPick, suggested, disabled }: { onPick: (c: CategoryId) =
             <button key={c.id} onClick={() => onPick(c.id)} disabled={disabled} style={{ ['--i' as string]: i }}
               className={`rise press relative flex min-h-14 items-center gap-3 rounded-[14px] border px-3.5 text-left text-[0.9375rem] font-medium ${
                 sug ? 'border-transparent bg-accent text-accent-ink' : 'border-line bg-surface'
-              } ${i === CATEGORIES.length - 1 ? 'col-span-2' : ''}`}>
-              <Icon name={ICON[c.id]} size={22} strokeWidth={1.6} />
+              }`}>
+              <Icon name={c.icon as IconName} size={22} strokeWidth={1.6} />
               <span className="leading-tight">{t.categories[c.id]}</span>
-              {sug && <span className="ml-auto inline-flex items-center gap-1 text-[0.6875rem] font-semibold opacity-80"><Icon name="sparkle" size={12} />{t.capture.suggested}</span>}
+              {sug && (
+                <span className="ml-auto inline-flex min-w-0 items-center gap-1 text-[0.6875rem] font-semibold opacity-80">
+                  <Icon name="sparkle" size={12} className="shrink-0" /><span className="truncate">{typeById(c.id, suggestedType) ? typeLabel(c.id, suggestedType, lang) : t.capture.suggested}</span>
+                </span>
+              )}
             </button>
           )
         })}
@@ -198,7 +200,7 @@ export function Capture() {
     setSavedCat(c)
     try { await saveJob(c, color) } catch (e) { console.error(e); setSaving(false) }
   }
-  const nameFor = (category: CategoryId) => displayName({ name: '', category, color: color ?? job?.color ?? PENDING_COLOR }, lang)
+  const nameFor = (category: CategoryId) => displayName({ name: '', category, type: category === job?.suggested ? job?.suggestedType : undefined, color: color ?? job?.color ?? PENDING_COLOR }, lang)
   const title = !job ? undefined
     : job.status === 'ready' && job.suggested ? nameFor(job.suggested)
     : job.status === 'ready' ? t.capture.readyTitle
@@ -215,7 +217,7 @@ export function Capture() {
         <div className="page-in px-4 pb-8">
           <PhotoCard job={job} />
           <ColorRow job={job} value={color} onChange={setColor} />
-          <Categories onPick={pick} suggested={job.suggested} disabled={saving} />
+          <Categories onPick={pick} suggested={job.suggested} suggestedType={job.suggestedType} disabled={saving} />
         </div>
       )}
     </div>

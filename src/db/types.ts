@@ -15,7 +15,8 @@ export interface Garment {
   id: string
   name: string
   category: CategoryId
-  subcategory?: string // libre: "vaquero", "polo"…
+  type?: string // tipo del catálogo (categories.ts): "jeans", "rugby", "sneakers"…
+  subcategory?: string // (antiguo) tipo escrito a mano; se migra a `type` cuando se puede
   color: ColorInfo
   palette: ColorInfo[]
   brand?: string

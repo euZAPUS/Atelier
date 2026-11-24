@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import { db, newId } from '../../db/db'
 import type { ColorInfo, Garment } from '../../db/types'
-import { categoryById, type CategoryId } from '../../domain/categories'
+import { defaultWash, typeById, type CategoryId } from '../../domain/categories'
 import { extractPalette, nameWithWords } from '../../domain/color'
 import { AiError, aiConfig, aiIdentify, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
@@ -23,13 +23,14 @@ export interface Job {
   savedId?: string
   phase?: 'ai' | 'cutout'
   suggested?: CategoryId // categoría que propone la IA
+  suggestedType?: string // tipo que propone la IA (dentro de esa categoría)
   aiFallback?: AiError['kind'] // la IA no se pudo usar y se recortó en el móvil
   aiUsed?: boolean // la imagen es una foto de producto generada por la IA
   pickedAt: number // hora de la foto (para mostrarla)
 }
 
-interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[]; suggested?: CategoryId; aiFallback?: AiError['kind']; aiUsed?: boolean }
-type Phase = (p: { phase: 'ai' | 'cutout'; suggested?: CategoryId; aiFallback?: AiError['kind'] }) => void
+interface Result { cutout: Blob; thumb: Blob; original: Blob; color: ColorInfo; palette: ColorInfo[]; suggested?: CategoryId; suggestedType?: string; aiFallback?: AiError['kind']; aiUsed?: boolean }
+type Phase = (p: { phase: 'ai' | 'cutout'; suggested?: CategoryId; suggestedType?: string; aiFallback?: AiError['kind'] }) => void
 
 let job: Job | null = null
 let result: Promise<Result> | null = null
@@ -89,6 +90,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   let original = await canvasToBlob(full, 'image/jpeg', 0.82)
   let cut: HTMLCanvasElement | null
   let suggested: CategoryId | undefined
+  let suggestedType: string | undefined
   let aiFallback: AiError['kind'] | undefined
   let aiUsed = false
   let words: string[] = []
@@ -114,11 +116,12 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
         src = rotateCanvas(full, rotation) // la prenda, derecha (cuello arriba)
         original = await canvasToBlob(src, 'image/jpeg', 0.82)
       }
-      if (id?.category) onPhase({ phase: 'ai', suggested: id.category })
+      if (id?.category) onPhase({ phase: 'ai', suggested: id.category, suggestedType: id.type })
       // 2. Foto de producto sobre fondo neutro
       const ai = await productShot(await canvasToBlob(toCanvas(src, 1024), 'image/jpeg', 0.9), hint, id)
       suggested = ai.category ?? undefined
-      onPhase({ phase: 'cutout', suggested })
+      suggestedType = id?.type ?? ai.type
+      onPhase({ phase: 'cutout', suggested, suggestedType })
       const abmp = await decode(ai.image)
       const aiCanvas = toCanvas(abmp, 1024)
       abmp.close()
@@ -139,7 +142,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   const cutout = await encodeAlpha(toCanvas(cut, 900))
   const thumb = await encodeAlpha(toCanvas(cut, 360), 0.8)
   const palette = nameWithWords(extractPalette(samplePixels(cut)), words)
-  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, aiFallback, aiUsed }
+  return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, suggestedType, aiFallback, aiUsed }
 }
 
 export function startCapture(file: Blob) {
@@ -154,7 +157,7 @@ export function startCapture(file: Blob) {
   result = process(file, (p) => { if (job?.id === mine) set(p) })
   result.then(async (r) => {
     if (job?.id !== mine) { await applyIfSaved(mine, r); return }
-    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, suggested: r.suggested, aiFallback: r.aiFallback, aiUsed: r.aiUsed })
+    set({ status: 'ready', cutoutUrl: URL.createObjectURL(r.cutout), color: r.color, palette: r.palette, suggested: r.suggested, suggestedType: r.suggestedType, aiFallback: r.aiFallback, aiUsed: r.aiUsed })
     await applyIfSaved(mine, r)
   }).catch(async (e) => {
     console.error(e)
@@ -198,9 +201,11 @@ export async function saveJob(category: CategoryId, color?: ColorInfo): Promise<
   const imageId = newId()
   const ready = j.status === 'ready'
   const r = ready ? await result : null
+  // El tipo que propuso la IA, si la categoría elegida es la suya
+  const sType = j.suggested === category && typeById(category, j.suggestedType) ? j.suggestedType : undefined
   const garment: Garment = {
-    id: gid, name: '', category, color: color ?? r?.color ?? PENDING_COLOR, palette: r?.palette ?? [],
-    imageId, washAfter: categoryById(category).washAfter, wearsSinceWash: 0, wearsTotal: 0,
+    id: gid, name: '', category, type: sType, color: color ?? r?.color ?? PENDING_COLOR, palette: r?.palette ?? [],
+    imageId, washAfter: defaultWash(category, sType), wearsSinceWash: 0, wearsTotal: 0,
     createdAt: now, updatedAt: now, archived: false,
   }
   const file = jobFile!

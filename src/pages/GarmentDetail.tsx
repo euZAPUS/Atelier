@@ -2,10 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type ReactNode } from 'react'
 import { db } from '../db/db'
 import type { Garment } from '../db/types'
-import { CATEGORIES, categoryById, SUBCATEGORY_WASH, type CategoryId } from '../domain/categories'
+import { CATEGORIES, defaultWash, typesOf, type CategoryId } from '../domain/categories'
 import { NAMED_COLORS } from '../domain/color'
 import { clashesFor, matchesFor } from '../domain/harmony'
-import { colorLabel, displayName } from '../domain/naming'
+import { colorLabel, displayName, typeLabel } from '../domain/naming'
 import { garmentStatus } from '../domain/wash'
 import { reprocess } from '../features/capture/store'
 import { MatchRow } from '../features/wardrobe/MatchRow'
@@ -71,15 +71,15 @@ export function GarmentDetail({ id }: { id: string }) {
 
   const st = garmentStatus(g)
   const fmtDate = (d: number | string) => new Date(d).toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' })
-  const setSub = (v: string) => {
-    const w = SUBCATEGORY_WASH[v.trim().toLowerCase()]
-    const isDefault = g.washAfter === categoryById(g.category).washAfter
-    update(g.id, { subcategory: v.trim() || undefined, ...(w !== undefined && isDefault ? { washAfter: w } : {}) })
+  // Si los usos antes de lavar eran los de serie, se actualizan al cambiar de categoría o de tipo
+  const isDefaultWash = g.washAfter === defaultWash(g.category, g.type)
+  const setType = (type?: string) => {
+    if (type === g.type) type = undefined // tocar el tipo activo lo quita
+    update(g.id, { type, ...(isDefaultWash ? { washAfter: defaultWash(g.category, type) } : {}) })
   }
   const setCategory = (c: CategoryId) => {
     if (c === g.category) return
-    const wasDefault = g.washAfter === categoryById(g.category).washAfter
-    update(g.id, { category: c, ...(wasDefault ? { washAfter: categoryById(c).washAfter } : {}) })
+    update(g.id, { category: c, type: undefined, ...(isDefaultWash ? { washAfter: defaultWash(c) } : {}) })
   }
   const remove = async () => {
     if (!confirm(t.garment.confirmDelete)) return
@@ -95,7 +95,7 @@ export function GarmentDetail({ id }: { id: string }) {
   const washText = g.washAfter === null ? t.garment.washNever : fmt(t.garment.washProgress, { n: g.wearsSinceWash, max: g.washAfter })
 
   const daysSince = g.lastWornAt ? Math.max(0, Math.round((Date.now() - new Date(g.lastWornAt).getTime()) / 86_400_000)) : null
-  const subtitle = [g.brand, g.subcategory || t.categories[g.category]].filter(Boolean).join(' · ')
+  const subtitle = [g.brand, g.type ? typeLabel(g.category, g.type, lang) : t.categories[g.category]].filter(Boolean).join(' · ')
   const matches = g.color.name !== 'pending' ? matchesFor(g.color.name) : []
   const clashes = g.color.name !== 'pending' ? clashesFor(g.color.name) : []
 
@@ -180,17 +180,19 @@ export function GarmentDetail({ id }: { id: string }) {
           <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
             {CATEGORIES.map((c) => <Chip key={c.id} active={g.category === c.id} onClick={() => setCategory(c.id)}>{t.categories[c.id]}</Chip>)}
           </div>
+          <h2 className="section-label mt-4 mb-2 px-1">{t.garment.subcategory}</h2>
+          <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
+            {typesOf(g.category).map((ty) => <Chip key={ty.id} active={g.type === ty.id} onClick={() => setType(ty.id)}>{lang === 'es' ? ty.es : ty.en}</Chip>)}
+          </div>
         </section>
 
         <section>
           <h2 className="section-label mb-2 px-1">{t.garment.details}</h2>
           <div className="group">
             <Row label={t.garment.name}><TextField value={g.name} placeholder={displayName({ ...g, name: '' }, lang)} onSave={(name) => update(g.id, { name: name.trim() })} /></Row>
-            <Row label={t.garment.subcategory}><TextField value={g.subcategory} placeholder={t.garment.subPlaceholder} onSave={setSub} list="subcats" /></Row>
             <Row label={t.garment.brand}><TextField value={g.brand} placeholder="—" onSave={(brand) => update(g.id, { brand: brand.trim() || undefined })} /></Row>
             <Row label={t.garment.notes} stacked><TextField value={g.notes} placeholder={t.garment.notesPlaceholder} multiline onSave={(notes) => update(g.id, { notes: notes.trim() || undefined })} /></Row>
           </div>
-          <datalist id="subcats"><option value="Vaquero" /><option value="Chino" /><option value="Cargo" /><option value="Polo" /><option value="Zapatillas" /><option value="Gorra" /></datalist>
         </section>
 
         <section>
@@ -209,7 +211,7 @@ export function GarmentDetail({ id }: { id: string }) {
             <label className="flex items-center justify-between px-4 py-3">
               <span className="text-[0.9375rem]">{t.garment.never}</span>
               <input type="checkbox" checked={g.washAfter === null} className="size-5 accent-[var(--ink)]"
-                onChange={() => update(g.id, { washAfter: g.washAfter === null ? categoryById(g.category).washAfter ?? 3 : null })} />
+                onChange={() => update(g.id, { washAfter: g.washAfter === null ? defaultWash(g.category, g.type) ?? 3 : null })} />
             </label>
           </div>
         </section>

@@ -1,5 +1,5 @@
 import type { Garment } from '../db/types'
-import type { CategoryId } from './categories'
+import { typeById, type CategoryId, type Gender } from './categories'
 
 type Lang = 'es' | 'en'
 
@@ -35,37 +35,61 @@ const COLOR_NAMES: Record<string, { es: [string, string]; en: string }> = {
   yellow: { es: ['amarillo', 'amarilla'], en: 'yellow' },
 }
 
-// Singular de cada categoría y su género gramatical
-const SINGULAR: Record<CategoryId, { es: [string, 'm' | 'f']; en: string }> = {
+// Nombre por defecto de cada categoría cuando la prenda no tiene tipo
+const CATEGORY_NOUN: Record<CategoryId, { es: [string, Gender]; en: string }> = {
   tshirts: { es: ['Camiseta', 'f'], en: 'T-shirt' },
-  longsleeves: { es: ['Camiseta de manga larga', 'f'], en: 'Long sleeve' },
-  hoodies: { es: ['Sudadera', 'f'], en: 'Hoodie' },
+  polos: { es: ['Polo', 'm'], en: 'Polo' },
+  shirts: { es: ['Camisa', 'f'], en: 'Shirt' },
+  hoodies: { es: ['Sudadera', 'f'], en: 'Sweatshirt' },
   jackets: { es: ['Chaqueta', 'f'], en: 'Jacket' },
   trousers: { es: ['Pantalón', 'm'], en: 'Trousers' },
+  tracksuits: { es: ['Chándal', 'm'], en: 'Tracksuit' },
   footwear: { es: ['Calzado', 'm'], en: 'Shoes' },
+  headwear: { es: ['Gorro', 'm'], en: 'Hat' },
   accessories: { es: ['Accesorio', 'm'], en: 'Accessory' },
 }
 
-export function colorLabel(colorId: string, lang: Lang, gender: 'm' | 'f' = 'm') {
-  const c = COLOR_NAMES[colorId]
-  if (!c) return colorId
-  return lang === 'es' ? c.es[gender === 'm' ? 0 : 1] : c.en
+// Colores que en español no cambian en plural ("pantalones beige", "zapatillas rosa")
+const INVARIABLE = new Set(['beige', 'camel', 'caqui', 'rosa', 'naranja', 'mostaza', 'burdeos', 'lila', 'fucsia'])
+function pluralEs(word: string) {
+  if (word.includes(' ') || INVARIABLE.has(word)) return word // "azul marino", "gris claro": no cambian
+  if (/[aeiouáéó]$/.test(word)) return word + 's'
+  return word.normalize('NFD').replace(/[\u0300-\u036f]/g, '') + 'es' // azul → azules, marrón → marrones, gris → grises
 }
 
-// Nombre que se muestra: el que pusiste o uno automático ("Sudadera negra", "Black hoodie").
-export function displayName(g: Pick<Garment, 'name' | 'category' | 'subcategory' | 'color'>, lang: Lang) {
+export function colorLabel(colorId: string, lang: Lang, gender: Gender = 'm', plural = false) {
+  const c = COLOR_NAMES[colorId]
+  if (!c) return colorId
+  if (lang !== 'es') return c.en
+  const w = c.es[gender === 'm' ? 0 : 1]
+  return plural ? pluralEs(w) : w
+}
+
+/** Nombre del tipo (o de la categoría si no tiene) en el idioma pedido. */
+export function typeLabel(category: CategoryId, type: string | undefined, lang: Lang) {
+  const t = typeById(category, type)
+  if (t) return lang === 'es' ? t.es : t.en
+  const n = CATEGORY_NOUN[category] ?? CATEGORY_NOUN.accessories
+  return lang === 'es' ? n.es[0] : n.en
+}
+
+// Nombre que se muestra: el que pusiste o uno automático ("Sudadera rugby verde botella", "Zapatillas rojas", "Black hoodie").
+export function displayName(g: Pick<Garment, 'name' | 'category' | 'type' | 'subcategory' | 'color'>, lang: Lang) {
   if (g.name.trim()) return g.name.trim()
-  const s = SINGULAR[g.category]
-  if (g.color.name === 'pending') return lang === 'es' ? s.es[0] : s.en
+  const t = typeById(g.category, g.type)
+  const fallback = CATEGORY_NOUN[g.category] ?? CATEGORY_NOUN.accessories
+  // Prendas antiguas con "tipo" escrito a mano y sin tipo del catálogo
+  const legacy = !t && g.subcategory?.trim() ? g.subcategory.trim().toLowerCase() : ''
   if (lang === 'es') {
-    const [noun, gender] = s.es
-    const sub = g.subcategory?.trim() ? ` ${g.subcategory.trim().toLowerCase()}` : ''
-    const color = colorLabel(g.color.name, 'es', gender)
-    // "Pantalón vaquero", no "Pantalón vaquero azul vaquero"
-    if (sub && color.includes(sub.trim())) return `${noun}${sub}`
-    return `${noun}${sub} ${color}`
+    const noun = t ? t.es : fallback.es[0] + (legacy ? ` ${legacy}` : '')
+    if (g.color.name === 'pending') return noun
+    const color = colorLabel(g.color.name, 'es', t ? t.gender : fallback.es[1], t?.plural)
+    // "Vaquero azul vaquero" → "Vaquero azul"; "Camisa vaquera azul vaquero" → "Camisa vaquera"
+    if (noun.toLowerCase().includes(color.split(' ').pop()!.slice(0, 5))) return noun
+    return `${noun} ${color}`
   }
-  const sub = g.subcategory?.trim() ? `${g.subcategory.trim().toLowerCase()} ` : ''
+  const noun = (t ? t.en : (legacy ? `${legacy} ` : '') + fallback.en).toLowerCase()
+  if (g.color.name === 'pending') return noun[0].toUpperCase() + noun.slice(1)
   const label = colorLabel(g.color.name, 'en')
-  return `${label[0].toUpperCase()}${label.slice(1)} ${sub}${s.en.toLowerCase()}`
+  return `${label[0].toUpperCase()}${label.slice(1)} ${noun}`
 }

@@ -2,9 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { db } from '../db/db'
 import type { GarmentStatus } from '../db/types'
-import { CATEGORIES, type CategoryId } from '../domain/categories'
+import { CATEGORIES, typesOf, type CategoryId } from '../domain/categories'
 import { NAMED_COLORS } from '../domain/color'
-import { colorLabel, displayName } from '../domain/naming'
+import { colorLabel, displayName, typeLabel } from '../domain/naming'
 import { garmentStatus } from '../domain/wash'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { GarmentCard } from '../features/wardrobe/GarmentCard'
@@ -31,7 +31,9 @@ export function Wardrobe() {
   const t = useT()
   const { lang } = useSettings()
   const all = useLiveQuery(() => db.garments.orderBy('createdAt').reverse().filter((g) => !g.archived).toArray(), [])
-  const [cat, setCat] = useState<CategoryId | null>(null)
+  const [cat, setCatRaw] = useState<CategoryId | null>(null)
+  const [type, setType] = useState<string | null>(null)
+  const setCat = (c: CategoryId | null) => { setCatRaw(c); setType(null) }
   const [color, setColor] = useState<string | null>(null)
   const [status, setStatus] = useState<GarmentStatus | null>(null)
   const [q, setQ] = useState('')
@@ -46,9 +48,9 @@ export function Wardrobe() {
   const statuses = useMemo(() => garments.map(garmentStatus), [garments])
   const query = norm(q.trim())
   const shown = garments.filter((g, i) =>
-    (!cat || g.category === cat) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
-    (!query || norm(`${displayName(g, lang)} ${g.brand ?? ''} ${g.subcategory ?? ''} ${t.categories[g.category]} ${colorLabel(g.color.name, lang)}`).includes(query)))
-  const filtered = cat || color || status || query
+    (!cat || g.category === cat) && (!type || g.type === type) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
+    (!query || norm(`${displayName(g, lang)} ${g.brand ?? ''} ${g.subcategory ?? ''} ${g.type ? typeLabel(g.category, g.type, lang) : ''} ${t.categories[g.category]} ${colorLabel(g.color.name, lang)}`).includes(query)))
+  const filtered = cat || type || color || status || query
   const count = garments.length === 1 ? t.wardrobe.countOne : fmt(t.wardrobe.count, { n: garments.length })
 
   return (
@@ -93,6 +95,15 @@ export function Wardrobe() {
                 </Pill>
               ))}
             </div>
+            {cat && (() => {
+              const present = new Set(garments.filter((g) => g.category === cat && g.type).map((g) => g.type))
+              const list = typesOf(cat).filter((ty) => present.has(ty.id))
+              return list.length > 1 ? (
+                <div className="page-in no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4">
+                  {list.map((ty) => <Pill key={ty.id} active={type === ty.id} onClick={() => setType(type === ty.id ? null : ty.id)}>{lang === 'es' ? ty.es : ty.en}</Pill>)}
+                </div>
+              ) : null
+            })()}
           </div>
           {shown.length ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pt-2">

@@ -2,8 +2,8 @@ export const es = {
   app: { name: 'Atelier', tagline: 'Tu armario, en el bolsillo.' },
   nav: { wardrobe: 'Armario', outfits: 'Outfits', add: 'Añadir', week: 'Semana', settings: 'Ajustes' },
   categories: {
-    tshirts: 'Camisetas', longsleeves: 'Manga larga', hoodies: 'Sudaderas', jackets: 'Chaquetas',
-    trousers: 'Pantalones', footwear: 'Calzado', accessories: 'Accesorios',
+    tshirts: 'Camisetas', polos: 'Polos', shirts: 'Camisas', hoodies: 'Sudaderas y jerséis', jackets: 'Chaquetas y abrigos',
+    trousers: 'Pantalones', tracksuits: 'Chándal', footwear: 'Calzado', headwear: 'Gorras y gorros', accessories: 'Accesorios',
   },
   status: { clean: 'Limpia', worn: 'Usada', dirty: 'Sucia' },
   statusPlural: { all: 'Todas', clean: 'Limpias', worn: 'Usadas', dirty: 'Sucias' },

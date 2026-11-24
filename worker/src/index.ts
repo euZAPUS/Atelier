@@ -25,8 +25,21 @@ const DEFAULT_ORIGINS = 'https://euzapus.github.io,http://localhost:5173,http://
 // Mistral Small 3.1: en las pruebas con fotos reales fue el más rápido (~1,5 s) y el único que ubica bien el cuello
 const VISION = '@cf/mistralai/mistral-small-3.1-24b-instruct'
 const IMAGE = '@cf/black-forest-labs/flux-2-klein-4b'
-const CATEGORIES = ['tshirts', 'longsleeves', 'hoodies', 'jackets', 'trousers', 'footwear', 'accessories'] as const
-type Category = (typeof CATEGORIES)[number]
+// Mismo catálogo que la app (src/domain/categories.ts): categoría → tipos
+const TYPES = {
+  tshirts: ['tee', 'longsleeve', 'tank'],
+  polos: ['polo', 'longpolo'],
+  shirts: ['shirt', 'overshirt', 'denimshirt', 'flannel'],
+  hoodies: ['sweatshirt', 'hoodie', 'zip', 'rugby', 'sweater', 'cardigan'],
+  jackets: ['jacket', 'denimjacket', 'puffer', 'coat', 'windbreaker', 'blazer', 'vest'],
+  trousers: ['jeans', 'chinos', 'cargo', 'trousers', 'shorts'],
+  tracksuits: ['trackpants', 'trackjacket', 'tracksuit'],
+  footwear: ['sneakers', 'boots', 'shoes', 'sandals'],
+  headwear: ['cap', 'beanie', 'bucket'],
+  accessories: ['backpack', 'bag', 'crossbody', 'belt', 'glasses', 'watch', 'scarf', 'socks', 'jewelry'],
+} as const
+const CATEGORIES = Object.keys(TYPES) as (keyof typeof TYPES)[]
+type Category = keyof typeof TYPES
 
 function cors(req: Request, env: Env): Record<string, string> {
   const origin = req.headers.get('Origin') ?? ''
@@ -45,13 +58,15 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 
 /** 1. ¿Qué prenda es? Devuelve categoría y una descripción corta en inglés para el prompt de imagen. */
-type Identity = { category: Category | null; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean; raw?: string }
+type Identity = { category: Category | null; type?: string; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean; raw?: string }
 async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
-Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts: call them "rugby sweatshirt" in the description) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
+Categories and their types (category: type ids):
+${Object.entries(TYPES).map(([c, t]) => `${c}: ${t.join(', ')}`).join('\n')}
+Guide: polos have a collar with buttons and short or long sleeves in piqué; shirts are woven with full button front; hoodies covers sweatshirts, hoodies, thick collared rugby sweatshirts (type rugby) and knit sweaters; tracksuits are sports track pants/jackets; trousers are jeans, chinos, cargo, shorts; headwear is caps and hats; accessories are bags, backpacks, belts, glasses, socks, etc.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
@@ -73,10 +88,16 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
     // De lado, los modelos confunden izquierda y derecha: la app gira 90° y vuelve a preguntar (arriba/abajo sí lo aciertan)
     const sideways = rotation === 90 || rotation === 270
     let category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
-    // Regla fija: lo que se describe como sudadera/jersey/rugby es Sudaderas aunque el modelo diga "manga larga"
-    if ((category === 'longsleeves' || category === 'tshirts') && /\b(sweatshirt|sweater|jumper|hoodie|rugby|fleece|knit|crewneck)\b/i.test(String(parsed.description))) category = 'hoodies'
+    let type = typeof (parsed as { type?: unknown }).type === 'string' ? String((parsed as { type?: unknown }).type).toLowerCase() : undefined
+    // Regla fija: lo que se describe como sudadera/jersey/rugby va a Sudaderas aunque el modelo diga "camiseta"
+    const desc = String(parsed.description)
+    if (category === 'tshirts' && /\b(sweatshirt|sweater|jumper|hoodie|rugby|fleece|knit|crewneck)\b/i.test(desc)) {
+      category = 'hoodies'
+      type = /rugby/i.test(desc) || /collar/i.test(desc) ? 'rugby' : /hood/i.test(desc) ? 'hoodie' : /knit|sweater|jumper/i.test(desc) ? 'sweater' : 'sweatshirt'
+    }
+    if (category && type && !(TYPES[category] as readonly string[]).includes(type)) type = undefined
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
-    return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation, sideways, raw: text.slice(0, 400) }
+    return { category, type, description: (parsed.description ?? '').slice(0, 160), colors, rotation, sideways, raw: text.slice(0, 400) }
   } catch {
     return { category: null, description: '', colors: [], rotation: 0 }
   }

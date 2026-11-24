@@ -4,8 +4,8 @@ export const en: Dict = {
   app: { name: 'Atelier', tagline: 'Your wardrobe, in your pocket.' },
   nav: { wardrobe: 'Wardrobe', outfits: 'Outfits', add: 'Add', week: 'Week', settings: 'Settings' },
   categories: {
-    tshirts: 'T-shirts', longsleeves: 'Long sleeves', hoodies: 'Hoodies', jackets: 'Jackets',
-    trousers: 'Trousers', footwear: 'Footwear', accessories: 'Accessories',
+    tshirts: 'T-shirts', polos: 'Polos', shirts: 'Shirts', hoodies: 'Sweatshirts & knits', jackets: 'Jackets & coats',
+    trousers: 'Trousers', tracksuits: 'Tracksuits', footwear: 'Footwear', headwear: 'Headwear', accessories: 'Accessories',
   },
   status: { clean: 'Clean', worn: 'Worn', dirty: 'Dirty' },
   statusPlural: { all: 'All', clean: 'Clean', worn: 'Worn', dirty: 'Dirty' },
