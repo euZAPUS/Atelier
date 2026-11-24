@@ -4,10 +4,10 @@ import { useSyncExternalStore } from 'react'
 import { db, newId } from '../../db/db'
 import type { ColorInfo, Garment } from '../../db/types'
 import { categoryById, type CategoryId } from '../../domain/categories'
-import { extractPalette } from '../../domain/color'
+import { extractPalette, nameWithWords } from '../../domain/color'
 import { AiError, aiConfig, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
-import { chromaKey, hexToRgb } from '../../lib/chroma'
+import { keyOut } from '../../lib/chroma'
 import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
 
 export type JobStatus = 'processing' | 'ready' | 'failed'
@@ -123,13 +123,13 @@ function prepareForAi(work: HTMLCanvasElement, cut: HTMLCanvasElement) {
   return out
 }
 
-/** Recorte por croma de la imagen de la IA. null si el resultado no es creíble (se usa el recorte local). */
-function cutChroma(src: HTMLCanvasElement, keyHex: string) {
+/** Recorte del fondo liso de la imagen de la IA. null si el resultado no es creíble (se usa el recorte local). */
+function cutPlain(src: HTMLCanvasElement) {
   const c = toCanvas(src, 1024)
   const ctx = c.getContext('2d', { willReadFrequently: true })!
   const img = ctx.getImageData(0, 0, c.width, c.height)
-  const cover = chromaKey(img.data, c.width, c.height, hexToRgb(keyHex))
-  if (cover < 0.04 || cover > 0.92) return null // no había un fondo de croma de verdad
+  const cover = keyOut(img.data, c.width, c.height)
+  if (cover < 0.04 || cover > 0.92) return null // no había un fondo liso de verdad
   ctx.putImageData(img, 0, 0)
   return trimTransparent(c)
 }
@@ -137,7 +137,7 @@ function cutChroma(src: HTMLCanvasElement, keyHex: string) {
 /**
  * Procesa una foto: recorte, miniatura y color.
  * Con la IA activada: recorte local para aislar la prenda → la IA genera la foto de producto sobre un
- * fondo de croma → se quita el croma. Sin IA, sin conexión o sin cuota: recorte local de la foto tal cual.
+ * fondo neutro liso → se quita ese fondo. Los nombres de color los pone la IA (los ve mejor). Sin IA, sin conexión o sin cuota: recorte local de la foto tal cual.
  */
 async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId): Promise<Result> {
   const bmp = await decode(file)
@@ -148,6 +148,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   let suggested: CategoryId | undefined
   let aiFallback: AiError['kind'] | undefined
   let aiUsed = false
+  let words: string[] = []
   if (hasTransparency(full)) {
     cut = trimTransparent(full) // ya viene recortada ("Copiar sujeto" de iOS)
   } else if (await aiConfig()) {
@@ -162,7 +163,8 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
       const abmp = await decode(ai.image)
       const aiCanvas = toCanvas(abmp, 1024)
       abmp.close()
-      cut = (ai.key && cutChroma(aiCanvas, ai.key)) || (await cutLocal(aiCanvas))
+      cut = cutPlain(aiCanvas) || (await cutLocal(aiCanvas))
+      words = ai.colors
       aiUsed = true
     } catch (e) {
       aiFallback = e instanceof AiError ? e.kind : 'failed'
@@ -177,7 +179,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   if (!cut) throw new Error('No se encontró ninguna prenda en la foto')
   const cutout = await encodeAlpha(toCanvas(cut, 900))
   const thumb = await encodeAlpha(toCanvas(cut, 360), 0.8)
-  const palette = extractPalette(samplePixels(cut))
+  const palette = nameWithWords(extractPalette(samplePixels(cut)), words)
   return { cutout, thumb, original, color: palette[0] ?? PENDING_COLOR, palette, suggested, aiFallback, aiUsed }
 }
 

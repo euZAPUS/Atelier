@@ -102,9 +102,11 @@ function prompts(what: string, keyName: string): string[] {
 
 const isFlagged = (e: unknown) => /3030|flagged/i.test(String((e as Error)?.message ?? e))
 
-async function productShot(env: Env, image: Blob, description: string, key: { name: string }): Promise<{ image: string; attempt: number }> {
+async function productShot(env: Env, image: Blob, description: string, key: { name: string }, debug?: { prompt?: string; model?: string }): Promise<{ image: string; attempt: number }> {
   const what = description || 'the main garment'
-  const list = prompts(what, key.name)
+  // Modo de pruebas (solo con contraseña): instrucciones y modelo a medida, sin redesplegar
+  const list = debug?.prompt ? [debug.prompt.replaceAll('{what}', what).replaceAll('{bg}', key.name)] : prompts(what, key.name)
+  const model = debug?.model === '9b' ? '@cf/black-forest-labs/flux-2-klein-9b' : IMAGE
   let last: unknown
   for (let i = 0; i < list.length; i++) {
     const form = new FormData()
@@ -115,7 +117,7 @@ async function productShot(env: Env, image: Blob, description: string, key: { na
     // Workers AI recibe el multipart como stream + content-type
     const req = new Request('http://internal/', { method: 'POST', body: form })
     try {
-      const out = (await env.AI.run(IMAGE, { multipart: { body: req.body, contentType: req.headers.get('content-type')! } } as never)) as { image?: string }
+      const out = (await env.AI.run(model as typeof IMAGE, { multipart: { body: req.body, contentType: req.headers.get('content-type')! } } as never)) as { image?: string }
       if (!out.image) throw new Error('El modelo de imagen no devolvió nada')
       return { image: out.image, attempt: i + 1 }
     } catch (e) {
@@ -153,7 +155,8 @@ export default {
       let visionError: string | undefined
       const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '', colors: [] as string[] } })
       const key = pickKey(id.colors, id.description)
-      const shot = await productShot(env, image, id.description, key)
+      const debug = keyOk ? { prompt: (form.get('prompt') as string | null) ?? undefined, model: (form.get('model') as string | null) ?? undefined } : undefined
+      const shot = await productShot(env, image, id.description, key, debug)
       return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, colors: id.colors, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)

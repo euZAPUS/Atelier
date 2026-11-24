@@ -58,6 +58,48 @@ export function nameColor(lab: Lab): string {
   return best.id
 }
 
+// Nombres en inglés que usa la IA → id de color. Del más específico al más general.
+const WORDS: [RegExp, string][] = [
+  [/bottle green|forest green|dark green|hunter green|emerald/, 'darkgreen'], [/olive|army/, 'olive'], [/mint|sage/, 'mint'],
+  [/teal|turquoise/, 'teal'], [/khaki/, 'khaki'], [/green/, 'green'],
+  [/navy|dark blue|midnight/, 'navy'], [/denim|indigo|washed blue/, 'denim'], [/light blue|sky blue|baby blue|pale blue/, 'lightblue'], [/blue|cobalt|royal/, 'blue'],
+  [/charcoal|dark gr[ae]y|anthracite/, 'charcoal'], [/light gr[ae]y|heather|silver/, 'lightgrey'], [/gr[ae]y/, 'grey'],
+  [/off-white|cream|ivory|ecru|natural/, 'cream'], [/white/, 'white'], [/black/, 'black'],
+  [/camel|tan/, 'camel'], [/beige|sand|stone/, 'beige'], [/brown|chocolate|coffee/, 'brown'],
+  [/burgundy|maroon|wine|bordeaux/, 'burgundy'], [/fuchsia|magenta|hot pink/, 'fuchsia'], [/pink|rose|blush/, 'pink'], [/red|scarlet|crimson/, 'red'],
+  [/lilac|lavender/, 'lilac'], [/purple|violet|plum/, 'purple'], [/mustard|ochre/, 'mustard'], [/orange|rust|terracotta|coral/, 'orange'], [/yellow|lemon/, 'yellow'],
+]
+export function colorIdFromWords(text: string): string | null {
+  const t = text.toLowerCase()
+  for (const [re, id] of WORDS) if (re.test(t)) return id
+  return null
+}
+
+/**
+ * Pone a la paleta los nombres que dice la IA (ve "verde botella" donde las matemáticas ven casi negro).
+ * A cada color nombrado se le asigna el tono de la paleta más cercano; el primero pasa a ser el principal.
+ */
+export function nameWithWords(palette: ColorInfo[], words: string[]): ColorInfo[] {
+  if (!palette.length || !words.length) return palette
+  const out = palette.map((c) => ({ ...c }))
+  const used = new Set<number>()
+  const order: number[] = []
+  for (const w of words) {
+    const id = colorIdFromWords(w)
+    if (!id || out.some((c, i) => used.has(i) && c.name === id)) continue
+    const ref = NAMED_LAB.find((c) => c.id === id)!.lab
+    let best = -1, bd = Infinity
+    out.forEach((c, i) => { if (!used.has(i)) { const d = deltaE(c.lab, ref); if (d < bd) { bd = d; best = i } } })
+    if (best < 0 || bd > 45) continue // la IA nombra algo que no está en la paleta: no se fuerza
+    out[best].name = id
+    used.add(best)
+    order.push(best)
+  }
+  if (!order.length) return palette
+  // El principal es el primero que nombra la IA; el resto, en su orden de peso
+  return [out[order[0]], ...out.filter((_, i) => i !== order[0])]
+}
+
 // ---------- k-means en Lab ----------
 // Generador determinista: la misma foto da siempre los mismos colores.
 function rng(seed: number) {

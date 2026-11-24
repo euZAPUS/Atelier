@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractPalette, hexToRgb, labToRgb, nameColor, rgbToLab } from './color'
+import { colorIdFromWords, extractPalette, hexToRgb, labToRgb, nameColor, nameWithWords, rgbToLab } from './color'
 
 function pixels(spec: [string, number][], transparent = 0) {
   const arr: number[] = []
@@ -37,4 +37,26 @@ describe('color', () => {
     expect(p[0].name).toBe('red')
   })
   it('sin píxeles opacos no hay paleta', () => expect(extractPalette(pixels([], 100))).toEqual([]))
+})
+
+describe('nombres de la IA', () => {
+  it('reconoce los colores en inglés', () => {
+    expect(colorIdFromWords('dark green')).toBe('darkgreen')
+    expect(colorIdFromWords('bottle green')).toBe('darkgreen')
+    expect(colorIdFromWords('Light Grey')).toBe('lightgrey')
+    expect(colorIdFromWords('off-white')).toBe('cream')
+    expect(colorIdFromWords('denim blue')).toBe('denim')
+    expect(colorIdFromWords('navy')).toBe('navy')
+    expect(colorIdFromWords('glitter')).toBeNull()
+  })
+  it('el verde oscuro que parece gris pasa a ser verde botella (caso real)', () => {
+    const p = extractPalette(new Uint8ClampedArray([...Array(700)].flatMap(() => [30, 44, 42, 255]).concat([...Array(300)].flatMap(() => [236, 232, 226, 255]))))
+    const named = nameWithWords(p, ['dark green', 'white'])
+    expect(named[0].name).toBe('darkgreen')
+    expect(named.map((c) => c.name)).toContain('white')
+  })
+  it('si la IA nombra un color que no está, no lo fuerza', () => {
+    const p = extractPalette(new Uint8ClampedArray([...Array(100)].flatMap(() => [200, 30, 30, 255])))
+    expect(nameWithWords(p, ['navy'])[0].name).toBe('red')
+  })
 })
