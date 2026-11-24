@@ -107,14 +107,17 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
       })
       let id = await ask(full)
       let rotation = id?.rotation ?? 0
+      let upright = rotation === 0 // ¿la identidad (categoría, tipo) se sacó de la foto ya derecha?
       if (id?.sideways) {
         // De lado no se sabe si es a izquierda o derecha: se gira 90° y se pregunta otra vez (arriba/abajo sí lo acierta)
         const again = await ask(rotateCanvas(full, 90))
-        if (again) { rotation = again.rotation === 180 ? 270 : 90; id = again }
+        if (again) { rotation = again.rotation === 180 ? 270 : 90; id = again; upright = rotation === 90 }
       }
       if (rotation) {
         src = rotateCanvas(full, rotation) // la prenda, derecha (cuello arriba)
         original = await canvasToBlob(src, 'image/jpeg', 0.82)
+        // Con la foto torcida la IA clasifica peor (ve "camisas" o "pantalones"): se pregunta otra vez, ya derecha
+        if (!upright) id = (await ask(src)) ?? id
       }
       if (id?.category) onPhase({ phase: 'ai', suggested: id.category, suggestedType: id.type })
       // 2. Foto de producto sobre fondo neutro
