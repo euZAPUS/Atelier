@@ -61,7 +61,7 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
 type Identity = { category: Category | null; type?: string; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean; raw?: string }
 async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "sleeves": "<none, short or long: sleeve length for tops, as the garment really is even if the sleeves are folded in the photo; none for trousers, shoes and accessories>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Always state the sleeve length (sleeveless, short sleeves or long sleeves) for tops, and the leg length for trousers. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Categories and their types (category: type ids):
@@ -82,7 +82,12 @@ Guide: polos have a collar with buttons and short or long sleeves in piqué; shi
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
-    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; neckline?: unknown }
+    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; neckline?: unknown; sleeves?: unknown }
+    // El largo de manga va en un campo aparte (los modelos lo cumplen mejor) y se añade a la descripción para FLUX
+    const sleeves = String(parsed.sleeves ?? '').toLowerCase()
+    if ((sleeves === 'long' || sleeves === 'short') && !/sleeve/i.test(String(parsed.description ?? ''))) {
+      parsed.description = `${String(parsed.description ?? '').replace(/\.\s*$/, '')}, ${sleeves} sleeves`
+    }
     // Giro horario para dejar el cuello arriba (los modelos de visión aciertan mejor "dónde está" que "cuántos grados")
     const side = String(parsed.neckline ?? 'top').toLowerCase()
     const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
