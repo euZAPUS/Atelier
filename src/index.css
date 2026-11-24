@@ -58,6 +58,24 @@
 
 /* ---------- Base ---------- */
 html, body, #root { min-height: 100%; }
+/* ---- Comportamiento de app nativa ---- */
+html {
+  background: var(--bg); /* el rebote de iOS muestra el mismo color, no blanco */
+  overflow-x: clip; /* nunca hay desplazamiento horizontal de la página */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation; /* sin zoom con doble toque */
+}
+body {
+  overflow-x: clip;
+  -webkit-user-select: none; user-select: none; /* como en una app: mantener pulsado no selecciona texto */
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+/* iOS hace zoom al enfocar campos de menos de 16px: siempre 16px en el iPhone */
+@supports (-webkit-touch-callout: none) { input, textarea, select { font-size: max(16px, 1em) !important; } }
+/* Las filas que se desplazan en horizontal no arrastran la página ni disparan el gesto de "atrás" */
+.no-scrollbar { overscroll-behavior-x: contain; }
 body {
   margin: 0;
   background: var(--bg);
@@ -154,7 +172,8 @@ nav.tabbar { view-transition-name: tabbar; }
 .pb-tab { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 2.5rem); }
 
 /* Brillo de color muy tenue detrás del título (del estilo futurista, contenido) */
-.aura { position: absolute; top: -140px; right: -80px; width: 320px; height: 240px; pointer-events: none; z-index: -1;
+.aura-wrap { position: absolute; inset: 0 0 auto 0; height: 320px; overflow: hidden; pointer-events: none; z-index: -1; }
+.aura { position: absolute; top: -140px; right: -80px; width: 320px; height: 240px; pointer-events: none;
   background: conic-gradient(from 180deg, #7cf7ff2e, #b388ff2e, #ff8ad82e, #7cf7ff2e); filter: blur(50px); }
 :root[data-theme='light'] .aura { display: none; }
 @media (prefers-color-scheme: light) { :root:not([data-theme='dark']) .aura { display: none; } }

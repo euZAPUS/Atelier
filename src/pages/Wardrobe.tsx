@@ -53,7 +53,7 @@ export function Wardrobe() {
 
   return (
     <div className="relative isolate pb-tab">
-      <div className="aura" />
+      <div className="aura-wrap"><div className="aura" /></div>
       <header className="pt-safe px-4 pb-2">
         <div className="flex items-end justify-between">
           <h1 className="title">{t.wardrobe.title}</h1>
