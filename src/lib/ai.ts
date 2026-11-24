@@ -59,6 +59,7 @@ export async function productShot(photo: Blob, hint?: string, id?: AiIdentity | 
     form.append('description', id.description)
     form.append('colors', id.colors.join(','))
     if (id.category) form.append('category', id.category)
+    if (id.type) form.append('type', id.type)
     const d = await post('/garment', form, 60_000)
     if (!d.image) throw new AiError('failed', 'sin imagen')
     return { image: b64ToBlob(d.image), category: id.category, type: id.type, description: id.description, key: d.key, colors: id.colors }

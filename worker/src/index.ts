@@ -61,9 +61,9 @@ const json = (data: unknown, status: number, headers: Record<string, string>) =>
 type Identity = { category: Category | null; type?: string; description: string; colors: string[]; rotation: 0 | 90 | 180 | 270; sideways?: boolean; raw?: string }
 async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: string): Promise<Identity> {
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
-Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "sleeves": "<none, short or long: sleeve length for tops, as the garment really is even if the sleeves are folded in the photo; none for trousers, shoes and accessories>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
+Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
-Describe only what you can actually see. Always state the sleeve length (sleeveless, short sleeves or long sleeves) for tops, and the leg length for trousers. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
+Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Categories and their types (category: type ids):
 ${Object.entries(TYPES).map(([c, t]) => `${c}: ${t.join(', ')}`).join('\n')}
 Guide: polos have a collar with buttons and short or long sleeves in piqué; shirts are woven with full button front; hoodies covers sweatshirts, hoodies, thick collared rugby sweatshirts (type rugby) and knit sweaters; tracksuits are sports track pants/jackets; trousers are jeans, chinos, cargo, shorts; headwear is caps and hats; accessories are bags, backpacks, belts, glasses, socks, etc.`
@@ -82,12 +82,7 @@ Guide: polos have a collar with buttons and short or long sleeves in piqué; shi
   const text = (out.response as string | undefined) ?? ''
   if (!text) throw new Error('vision: respuesta vacía ' + JSON.stringify(out).slice(0, 200))
   try {
-    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; neckline?: unknown; sleeves?: unknown }
-    // El largo de manga va en un campo aparte (los modelos lo cumplen mejor) y se añade a la descripción para FLUX
-    const sleeves = String(parsed.sleeves ?? '').toLowerCase()
-    if ((sleeves === 'long' || sleeves === 'short') && !/sleeve/i.test(String(parsed.description ?? ''))) {
-      parsed.description = `${String(parsed.description ?? '').replace(/\.\s*$/, '')}, ${sleeves} sleeves`
-    }
+    const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as { category?: string; description?: string; colors?: unknown; neckline?: unknown }
     // Giro horario para dejar el cuello arriba (los modelos de visión aciertan mejor "dónde está" que "cuántos grados")
     const side = String(parsed.neckline ?? 'top').toLowerCase()
     const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
@@ -122,6 +117,15 @@ function pickKey(colors: string[], description: string): { hex: string; name: st
   return { hex: '#111111', name: 'deep black (#111111)' }
 }
 
+/** Largo de manga según el catálogo (más fiable que lo que ve el modelo con las mangas dobladas). */
+function sleeveHint(category: Category | null, type?: string): string {
+  if (!category) return ''
+  if (type === 'tank') return 'sleeveless'
+  if (type === 'tee' || type === 'polo' || type === 'shorts') return type === 'shorts' ? '' : 'short sleeves'
+  if (['hoodies', 'jackets', 'shirts'].includes(category) || type === 'longsleeve' || type === 'longpolo' || type === 'trackjacket' || type === 'tracksuit') return 'long sleeves'
+  return ''
+}
+
 /** 2. Foto de producto: la prenda estirada, de frente, sobre un fondo de croma liso. */
 // Instrucciones para la foto de producto, de más completas a más simples. Si el filtro de seguridad del
 // modelo marca la imagen por error (pasa con algunas fotos de habitaciones), se prueba la siguiente.
@@ -139,8 +143,9 @@ function prompts(what: string, keyName: string): string[] {
 
 const isFlagged = (e: unknown) => /3030|flagged/i.test(String((e as Error)?.message ?? e))
 
-async function productShot(env: Env, image: Blob, description: string, key: { name: string }, debug?: { prompt?: string; model?: string }): Promise<{ image: string; attempt: number }> {
-  const what = description || 'the main garment'
+async function productShot(env: Env, image: Blob, description: string, key: { name: string }, debug?: { prompt?: string; model?: string }, sleeves = ''): Promise<{ image: string; attempt: number }> {
+  const base = (description || 'the main garment').replace(/\.\s*$/, '')
+  const what = sleeves && !/sleeve/i.test(base) ? `${base}, ${sleeves}` : base
   // Modo de pruebas (solo con contraseña): instrucciones y modelo a medida, sin redesplegar
   const list = debug?.prompt ? [debug.prompt.replaceAll('{what}', what).replaceAll('{bg}', key.name)] : prompts(what, key.name)
   const model = debug?.model === '9b' ? '@cf/black-forest-labs/flux-2-klein-9b' : IMAGE
@@ -200,11 +205,11 @@ export default {
       // /garment: si la app ya trae la identidad (de /identify), no se repite la visión
       const known = form.get('description') as string | null
       const id: Identity = known
-        ? { category: (CATEGORIES as readonly string[]).includes(String(form.get('category'))) ? (form.get('category') as Category) : null, description: known.slice(0, 160), colors: String(form.get('colors') ?? '').split(',').filter(Boolean).slice(0, 4), rotation: 0 }
+        ? { category: (CATEGORIES as readonly string[]).includes(String(form.get('category'))) ? (form.get('category') as Category) : null, type: (form.get('type') as string | null) ?? undefined, description: known.slice(0, 160), colors: String(form.get('colors') ?? '').split(',').filter(Boolean).slice(0, 4), rotation: 0 }
         : await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
       const key = pickKey(id.colors, id.description)
       const debug = keyOk ? { prompt: (form.get('prompt') as string | null) ?? undefined, model: (form.get('model') as string | null) ?? undefined } : undefined
-      const shot = await productShot(env, image, id.description, key, debug)
+      const shot = await productShot(env, image, id.description, key, debug, sleeveHint(id.category, id.type))
       return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, colors: id.colors, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
