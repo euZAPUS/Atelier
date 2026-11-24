@@ -30,17 +30,19 @@ npm run preview    # sirve dist/ con el service worker activo
 npm run icons      # regenera los PNG del icono desde public/favicon.svg
 ```
 
-## Foto de producto con IA (opcional y gratis)
+## Foto de producto con IA (gratis, sin configurar)
 
-Con una foto hecha de cualquier manera (jersey doblado en la cama, con las crocs al lado…), el recorte local no basta: recorta lo que más destaca y deja la prenda tal como estaba. Por eso hay una **función de servidor propia** en `worker/`, en Cloudflare Workers AI con el plan gratuito (unas 75 prendas al día, sin tarjeta y sin claves de API):
+Con una foto hecha de cualquier manera (jersey doblado en la cama, de lado, con las crocs al lado…) la app obtiene una foto de producto limpia. La IA corre en una **función propia** (`worker/`, Cloudflare Workers AI con el plan gratuito: unas 75 prendas al día, sin tarjeta y sin claves de API). Viene configurada: la app ya trae la URL y la IA activada, y la función no pide contraseña a las peticiones que vienen de la web de Atelier.
 
-1. Un modelo de visión identifica la prenda principal y su categoría, que aparece resaltada al elegir.
-2. FLUX.2 [klein] genera esa prenda **estirada, de frente y sobre fondo blanco**.
-3. El móvil recorta ese fondo blanco y saca el color.
+1. **Identificar** (`/identify`, Mistral Small 3.1, ~1,5 s): categoría, colores con nombre y **dónde está el cuello**. Si la prenda está de lado, la app gira la foto 90° y pregunta otra vez: arriba/abajo lo acierta siempre, izquierda/derecha no.
+2. **Generar** (`/garment`, FLUX.2 [klein] 4B): con la foto ya derecha, la prenda estirada, de frente y sobre un **fondo neutro liso** (gris medio; blanco o negro si la prenda es gris). Las instrucciones son de **edición**: «convierte esta foto en…, quita la cama…, no copies texturas del entorno ni inventes logos». Fueron las ganadoras en las pruebas con fotos reales. Si el filtro de seguridad del modelo marca la imagen por error, se reintenta con instrucciones más simples.
+3. **Recortar** en el móvil: se mide el color real del fondo en los bordes y se quita lo conectado con ellos, así lo blanco y lo negro de la ropa no desaparecen. Los nombres de color los pone la IA, que ve «verde botella» donde las matemáticas ven casi negro.
 
-Sin conexión, sin cuota o sin configurar, la app recorta en el móvil como siempre. Las prendas ya guardadas tienen el botón **Mejorar con IA**, que parte de la foto original guardada. Instalación en [`worker/README.md`](worker/README.md).
+En la pantalla de alta, **Girar** y **Repetir** rehacen la foto si algo sale mal. Sin conexión, sin cuota o si la IA falla, se recorta en el móvil como siempre. Las prendas guardadas tienen **Mejorar con IA** en su ficha.
 
-> La IA genera una imagen nueva a partir de tu foto: puede simplificar o inventar detalles como logos o texturas. Siempre se guarda tu foto original.
+> La IA genera una imagen nueva: puede simplificar detalles. Siempre se guarda tu foto original (ya derecha).
+
+Modo de pruebas de la función, solo con la cabecera `X-Atelier-Key`: campos `prompt`, `model` (`9b`) y `vmodel` para probar instrucciones y modelos sin redesplegar. `/identify` devuelve además la respuesta literal del modelo.
 
 ## Alta rápida (fase 1)
 

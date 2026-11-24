@@ -51,7 +51,7 @@ async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: str
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
-Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
+Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees and shirts; hoodies = hoodies, sweatshirts (also thick collared rugby/polo sweatshirts: call them "rugby sweatshirt" in the description) AND knit sweaters/jumpers; jackets = jackets/coats; trousers = trousers/jeans/shorts; footwear = shoes; accessories = caps, bags, belts, etc.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
@@ -72,7 +72,9 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
     const rotation = (side.includes('left') ? 90 : side.includes('right') ? 270 : side.includes('bottom') ? 180 : 0) as Identity['rotation']
     // De lado, los modelos confunden izquierda y derecha: la app gira 90° y vuelve a preguntar (arriba/abajo sí lo aciertan)
     const sideways = rotation === 90 || rotation === 270
-    const category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
+    let category = CATEGORIES.includes(parsed.category as Category) ? (parsed.category as Category) : null
+    // Regla fija: lo que se describe como sudadera/jersey/rugby es Sudaderas aunque el modelo diga "manga larga"
+    if ((category === 'longsleeves' || category === 'tshirts') && /\b(sweatshirt|sweater|jumper|hoodie|rugby|fleece|knit|crewneck)\b/i.test(String(parsed.description))) category = 'hoodies'
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
     return { category, description: (parsed.description ?? '').slice(0, 160), colors, rotation, sideways, raw: text.slice(0, 400) }
   } catch {
