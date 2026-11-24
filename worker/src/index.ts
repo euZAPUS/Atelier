@@ -68,34 +68,56 @@ Category guide: tshirts = short sleeve tops; longsleeves = thin long sleeve tees
  * Color de croma para el fondo: uno que la prenda NO tenga, para recortarlo después sin errores.
  * Magenta por defecto; verde si la prenda es rosa/roja/morada; azul si además lleva verde.
  */
-export function pickKey(description: string): { hex: string; name: string } {
+function pickKey(description: string): { hex: string; name: string } {
   const d = description.toLowerCase()
-  const warm = /pink|magenta|fuchsia|purple|violet|lilac|lavender|red|burgundy|maroon|rose|coral|salmon/.test(d)
-  const green = /green|olive|mint|khaki|lime|sage|teal/.test(d)
+  // \b: que "collared" no cuente como "red"
+  const warm = /\b(pink|magenta|fuchsia|purple|violet|lilac|lavender|red|reddish|burgundy|maroon|rose|coral|salmon)\b/.test(d)
+  const green = /\b(green|greenish|olive|mint|khaki|lime|sage|teal)\b/.test(d)
   if (!warm) return { hex: '#ff00ff', name: 'magenta (#FF00FF)' }
   if (!green) return { hex: '#00ff00', name: 'chroma key green (#00FF00)' }
   return { hex: '#0000ff', name: 'pure blue (#0000FF)' }
 }
 
 /** 2. Foto de producto: la prenda estirada, de frente, sobre un fondo de croma liso. */
-async function productShot(env: Env, image: Blob, description: string, key: { name: string }): Promise<string> {
+// Instrucciones para la foto de producto, de más completas a más simples. Si el filtro de seguridad del
+// modelo marca la imagen por error (pasa con algunas fotos de habitaciones), se prueba la siguiente.
+function prompts(what: string, keyName: string): string[] {
+  return [
+    `E-commerce product photo of ${what}, exactly the same garment as in the reference image. ` +
+      `Laid out flat and fully unfolded, front view, upright, symmetrical, sleeves spread, the whole garment visible and centered, ` +
+      `on a perfectly flat, uniform, solid ${keyName} background (like a chroma key screen), no gradient, no texture, no shadow on the background. ` +
+      `Soft even studio light on the garment. Keep the exact colour, fabric texture, print, logos and details of the original. ` +
+      `Only that single garment, nothing else in the picture.`,
+    `Clean catalogue photo of the ${what} from the reference image: front view, upright, flat, centered, whole garment visible, ` +
+      `plain solid ${keyName} background. Same colours and details as the original.`,
+    `${what}, front view, flat lay, centered, solid ${keyName} background`,
+  ]
+}
+
+const isFlagged = (e: unknown) => /3030|flagged/i.test(String((e as Error)?.message ?? e))
+
+async function productShot(env: Env, image: Blob, description: string, key: { name: string }): Promise<{ image: string; attempt: number }> {
   const what = description || 'the main garment'
-  const prompt = `E-commerce product photo of ${what}, exactly the same garment as in the reference image. ` +
-    `Laid out flat and fully unfolded, front view, symmetrical, sleeves spread, the whole garment visible and centered, ` +
-    `on a perfectly flat, uniform, solid ${key.name} background (like a chroma key screen), no gradient, no texture, no shadow on the background. ` +
-    `Soft even studio light on the garment. ` +
-    `Keep the exact colour, fabric texture, print, logos and details of the original. ` +
-    `Only that single garment: no bed, no floor, no shoes, no hands, no people, no hanger, no other objects.`
-  const form = new FormData()
-  form.append('prompt', prompt)
-  form.append('input_image_0', image)
-  form.append('width', '1024')
-  form.append('height', '1024')
-  // Workers AI recibe el multipart como stream + content-type
-  const req = new Request('http://internal/', { method: 'POST', body: form })
-  const out = (await env.AI.run(IMAGE, { multipart: { body: req.body, contentType: req.headers.get('content-type')! } } as never)) as { image?: string }
-  if (!out.image) throw new Error('El modelo de imagen no devolvió nada')
-  return out.image
+  const list = prompts(what, key.name)
+  let last: unknown
+  for (let i = 0; i < list.length; i++) {
+    const form = new FormData()
+    form.append('prompt', list[i])
+    form.append('input_image_0', image)
+    form.append('width', '1024')
+    form.append('height', '1024')
+    // Workers AI recibe el multipart como stream + content-type
+    const req = new Request('http://internal/', { method: 'POST', body: form })
+    try {
+      const out = (await env.AI.run(IMAGE, { multipart: { body: req.body, contentType: req.headers.get('content-type')! } } as never)) as { image?: string }
+      if (!out.image) throw new Error('El modelo de imagen no devolvió nada')
+      return { image: out.image, attempt: i + 1 }
+    } catch (e) {
+      last = e
+      if (!isFlagged(e)) throw e // otros errores (cuota, caída): no tiene sentido reintentar
+    }
+  }
+  throw last
 }
 
 export default {
@@ -122,7 +144,7 @@ export default {
       const id = await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return { category: null, description: '' } })
       const key = pickKey(id.description)
       const shot = await productShot(env, image, id.description, key)
-      return json({ image: shot, key: key.hex, category: id.category, description: id.description, visionError }, 200, h)
+      return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
       // Cuota diaria gratis agotada → el móvil usa el recorte local
