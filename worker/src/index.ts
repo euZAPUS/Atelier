@@ -63,7 +63,7 @@ async function identify(env: Env, bytes: Uint8Array, hint?: string, vmodel?: str
   const prompt = `You are a fashion cataloguer. Look at the photo and find the MAIN garment (the biggest clothing item in focus${hint ? `, probably from the category "${hint}"` : ''}). Ignore beds, floors, hands, shoes in the background and any other objects.
 Answer ONLY with JSON, no prose: {"category": one of ${JSON.stringify(CATEGORIES)}, "type": "<the type id inside that category, from the list below>", "neckline": "<where the collar/neckline (or the waistband for trousers, the opening for shoes) is in the image: top, bottom, left or right>", "colors": ["<main colour of the garment>", "<other colours, most visible first>"], "description": "<colours, material, garment type and visible details such as collar, stripes, prints or logos, max 18 words>"}
 For colours use simple names such as: black, charcoal, grey, light grey, white, cream, beige, camel, brown, khaki, olive, dark green, green, mint, teal, navy, blue, denim blue, light blue, purple, lilac, pink, fuchsia, red, burgundy, orange, mustard, yellow.
-Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
+Describe only what you can actually see. Always state the sleeve length (sleeveless, short sleeves or long sleeves) for tops, and the leg length for trousers. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Categories and their types (category: type ids):
 ${Object.entries(TYPES).map(([c, t]) => `${c}: ${t.join(', ')}`).join('\n')}
 Guide: polos have a collar with buttons and short or long sleeves in piqué; shirts are woven with full button front; hoodies covers sweatshirts, hoodies, thick collared rugby sweatshirts (type rugby) and knit sweaters; tracksuits are sports track pants/jackets; trousers are jeans, chinos, cargo, shorts; headwear is caps and hats; accessories are bags, backpacks, belts, glasses, socks, etc.`
@@ -125,9 +125,9 @@ function prompts(what: string, keyName: string): string[] {
   // prohibiendo copiar texturas del entorno e inventar logos o capuchas.
   return [
     `Turn this photo into a professional e-commerce product photo of the ${what}. Keep only that one garment and remove everything else: bed, sheets, blankets, bags, shoes, floor. ` +
-      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, colours, collar and stripes. ` +
+      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, sleeve length, colours, collar and stripes. ` +
       `Do not add logos, text, hoods or pockets. Do not copy patterns or textures from the surroundings onto the garment. Background: plain solid ${keyName}, evenly lit.`,
-    `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, nothing added.`,
+    `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, same sleeve length, nothing added.`,
     `${what}, front view, flat lay, centered, plain ${keyName} background`,
   ]
 }

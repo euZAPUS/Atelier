@@ -105,19 +105,30 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
         if (e instanceof AiError && e.kind !== 'failed') throw e // sin conexión / sin cuota: directo al plan B
         return null
       })
+      // Orientación: si la IA ve el cuello arriba (lo normal, y ahí no falla) basta una pregunta.
+      // Si no, se pregunta a la vez por los 4 giros y se vota: cada respuesta implica un giro
+      // (el de esa foto + el que pide la IA) y gana la mayoría. Un fallo suelto del modelo ya no decide.
       let id = await ask(full)
-      let rotation = id?.rotation ?? 0
-      let upright = rotation === 0 // ¿la identidad (categoría, tipo) se sacó de la foto ya derecha?
-      if (id?.sideways) {
-        // De lado no se sabe si es a izquierda o derecha: se gira 90° y se pregunta otra vez (arriba/abajo sí lo acierta)
-        const again = await ask(rotateCanvas(full, 90))
-        if (again) { rotation = again.rotation === 180 ? 270 : 90; id = again; upright = rotation === 90 }
+      let rotation: 0 | 90 | 180 | 270 = 0
+      if (id && (id.rotation !== 0 || id.sideways)) {
+        const rots = [0, 90, 180, 270] as const
+        const answers = await Promise.all(rots.map((r) => (r === 0 ? Promise.resolve(id) : ask(rotateCanvas(full, r)))))
+        const votes = new Map<number, number>()
+        answers.forEach((ans, i) => {
+          if (!ans || ans.sideways) return // "de lado" no dice hacia dónde: no vota
+          const corr = (rots[i] + ans.rotation) % 360
+          votes.set(corr, (votes.get(corr) ?? 0) + (ans.rotation === 0 ? 2 : 1)) // "lo veo derecho" pesa más
+        })
+        const best = [...votes.entries()].sort((x, y) => y[1] - x[1])[0]
+        if (best) {
+          rotation = best[0] as typeof rotation
+          // Categoría y tipo, de la respuesta que vio la foto ya derecha
+          id = answers[rots.indexOf(rotation)] ?? id
+        }
       }
       if (rotation) {
         src = rotateCanvas(full, rotation) // la prenda, derecha (cuello arriba)
         original = await canvasToBlob(src, 'image/jpeg', 0.82)
-        // Con la foto torcida la IA clasifica peor (ve "camisas" o "pantalones"): se pregunta otra vez, ya derecha
-        if (!upright) id = (await ask(src)) ?? id
       }
       if (id?.category) onPhase({ phase: 'ai', suggested: id.category, suggestedType: id.type })
       // 2. Foto de producto sobre fondo neutro
