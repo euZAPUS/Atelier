@@ -71,6 +71,13 @@ El modelo se sirve desde la propia app, no desde el CDN de IMG.LY. No está en g
 - Avisos: si una prenda del outfit está sucia, el día dice «Lava antes: Chaqueta negra». Los días pasados muestran si lo pusiste o las prendas sueltas que anotaste.
 - «Usar hoy» (aquí o en el editor) deja el día como **Puesto** en `DayPlan` y el registro (`WearLog`) ligado al outfit. Al borrar un outfit se quitan sus planes futuros, y vuelven si deshaces.
 
+## Copia de seguridad (fase 5)
+
+*Ajustes → Copia de seguridad*:
+- **Exportar copia** crea un solo `.json` con todo: prendas, fotos (en base64), outfits, semana y registro de usos. En el iPhone abre la hoja de compartir (*Guardar en Archivos*, iCloud, AirDrop…) y en el PC se descarga. Los ajustes del dispositivo (tema, idioma, IA) no van en la copia.
+- **Restaurar una copia** comprueba el archivo, te dice qué vas a sustituir y pide confirmación antes de tocar nada.
+- Sirve también para pasar el armario de GitHub Pages a tu dominio cuando la subas allí.
+
 ## Gestos de iOS
 
 - **Barra de pestañas**: mantén pulsado y desliza; la píldora se vuelve una lente que sigue al dedo, se estira con la velocidad y rebota con muelle (`lib/spring.ts`) al soltar.
@@ -138,7 +145,7 @@ Cada push a `main` ejecuta `.github/workflows/pages.yml`: tests, descarga del mo
 
 Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de inicio**. Ábrela desde el icono, no desde Safari: solo así iOS concede el almacenamiento persistente.
 
-> Los datos se guardan por dominio: lo que metas en la versión de Pages no aparecerá cuando pases a `atelier.sangon.eu`. Para eso estará la copia de seguridad (fase 5).
+> Los datos se guardan por dominio: lo que metas en la versión de Pages no aparecerá cuando pases a `atelier.sangon.eu`. Para eso está la copia de seguridad (Ajustes → Copia de seguridad).
 
 ## Despliegue en tu dominio (más adelante)
 
@@ -155,7 +162,7 @@ Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de ini
 
 - Ningún dato sale del dispositivo. No hay servidor ni analítica.
 - Ninguna clave de API en el cliente, nunca. La futura IA irá en una función de servidor.
-- iOS puede borrar los datos de una web: la app pide `navigator.storage.persist()` y en la fase 5 tendrá copia de seguridad para exportar e importar.
+- iOS puede borrar los datos de una web: la app pide `navigator.storage.persist()` y tiene copia de seguridad en Ajustes para exportar y restaurar.
 
 ## Hoja de ruta
 

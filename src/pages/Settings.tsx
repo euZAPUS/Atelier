@@ -1,4 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { db } from '../db/db'
+import { BackupError, exportBackup, readBackup, restoreBackup, saveBackup, type BackupFile } from '../lib/backup'
+import { toast } from '../ui/Toast'
 import { fmt, useT } from '../i18n'
 import { aiPing, DEFAULT_AI_URL } from '../lib/ai'
 import { bgDevice, modelCached, onBgProgress, warmUp, type BgDevice } from '../lib/bg'
@@ -101,6 +105,62 @@ function CutoutSection() {
   )
 }
 
+const LAST_BACKUP = 'atelier:lastBackup'
+function BackupSection() {
+  const t = useT()
+  const { lang } = useSettings()
+  const count = useLiveQuery(() => db.garments.count(), [])
+  const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState<BackupFile | null>(null)
+  const [last, setLast] = useState(() => { try { return localStorage.getItem(LAST_BACKUP) } catch { return null } })
+  const input = useRef<HTMLInputElement>(null)
+  const date = (iso: string) => new Date(iso).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  const doExport = async () => {
+    setBusy(true)
+    try {
+      const r = await saveBackup(await exportBackup())
+      if (r !== 'cancelled') {
+        const now = new Date().toISOString()
+        try { localStorage.setItem(LAST_BACKUP, now) } catch { /* sin almacenamiento */ }
+        setLast(now); toast(t.settings.exported)
+      }
+    } finally { setBusy(false) }
+  }
+  const onFile = async (f?: File) => {
+    if (!f) return
+    try { setPending(await readBackup(f)) } catch (e) {
+      toast(e instanceof BackupError && e.message === 'newer' ? t.settings.backupNewer : t.settings.backupInvalid)
+    }
+  }
+  const doRestore = async () => {
+    if (!pending) return
+    setBusy(true)
+    try { await restoreBackup(pending); setPending(null); toast(t.settings.restored) } finally { setBusy(false) }
+  }
+
+  return (
+    <Section label={t.settings.backup} footer={t.settings.backupBody}>
+      <Row icon="download" label={busy && !pending ? t.settings.exporting : t.settings.export} onClick={busy ? undefined : doExport}
+        value={`${t.settings.lastBackup}: ${last ? date(last) : t.settings.never}`} />
+      <Row icon="upload" label={t.settings.import} onClick={() => input.current?.click()}><Icon name="chevron" size={16} className="text-faint" /></Row>
+      <input ref={input} type="file" accept="application/json,.json" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+      {pending && (
+        <div className="fade-in space-y-3 px-4 py-3">
+          <p className="text-[0.875rem] leading-relaxed text-muted">{fmt(t.settings.restoreConfirm, {
+            now: count === 1 ? t.wardrobe.countOne : fmt(t.wardrobe.count, { n: count ?? 0 }), date: date(pending.exportedAt),
+            garments: pending.garments.length, outfits: pending.outfits?.length ?? 0,
+          })}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setPending(null)} className="press h-10 rounded-[12px] bg-surface-2 text-[0.9375rem] font-semibold">{t.common.cancel}</button>
+            <button onClick={doRestore} disabled={busy} className="press h-10 rounded-[12px] bg-dirty text-[0.9375rem] font-semibold text-white disabled:opacity-50">{t.settings.restore}</button>
+          </div>
+        </div>
+      )}
+    </Section>
+  )
+}
+
 export function Settings() {
   const t = useT()
   const go = useNav()
@@ -127,6 +187,8 @@ export function Settings() {
 
         <AiSection />
         <CutoutSection />
+
+        <BackupSection />
 
         <Section label={t.settings.storage} footer={info?.persisted ? undefined : t.settings.notPersisted}>
           <Row icon="archive" label={info?.persisted ? t.settings.persisted : t.settings.requestPersist}
