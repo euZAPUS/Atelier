@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { Route, Router, Switch, useLocation } from 'wouter'
-import { useT } from './i18n'
 import { applyTheme, useSettings } from './lib/settings'
 import { useEdgeSwipeBack } from './lib/useEdgeSwipeBack'
 import { resumePending } from './features/capture/store'
@@ -11,7 +10,7 @@ import { Washer } from './pages/Washer'
 import { Onboarding, onboarded } from './pages/Onboarding'
 import { OutfitEditor } from './pages/OutfitEditor'
 import { Outfits } from './pages/Outfits'
-import { Placeholder } from './pages/Placeholder'
+import { Week } from './pages/Week'
 import { Settings } from './pages/Settings'
 import { Wardrobe } from './pages/Wardrobe'
 import { TabBar } from './ui/TabBar'
@@ -27,7 +26,6 @@ function FirstRun() {
 
 // Pantallas, con "deslizar desde el borde para volver" en las interiores
 function Pages() {
-  const t = useT()
   const [loc] = useLocation()
   const ref = useRef<HTMLDivElement>(null)
   const inner = /^\/(prenda|lavadora|kit|outfits\/)/.test(loc)
@@ -43,7 +41,7 @@ function Pages() {
           <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
           <Route path="/outfits"><Outfits /></Route>
           <Route path="/outfits/:id">{(p) => <OutfitEditor key={p.id} id={p.id} />}</Route>
-          <Route path="/semana"><Placeholder title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
+          <Route path="/semana"><Week /></Route>
           <Route path="/ajustes"><Settings /></Route>
           <Route path="/kit"><Kit /></Route>
           <Route><Wardrobe /></Route>

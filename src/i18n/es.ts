@@ -59,7 +59,13 @@ export const es = {
     verdict: { empty: '', good: 'Combina bien', ok: 'Sin choques', busy: 'Mucho color: prueba con algún neutro', clash: '{a} y {b} chocan' },
     clashHint: 'choca con {c}',
   },
-  week: { title: 'Semana', soon: 'Planifica qué te pones cada día. Llega en la fase 4.' },
+  week: {
+    title: 'Semana', today: 'Hoy', tomorrow: 'Mañana', thisWeek: 'Esta semana', prev: 'Semana anterior', next: 'Semana siguiente',
+    todayQ: '¿Qué te pones hoy?', pick: 'Elegir outfit', change: 'Cambiar', wear: 'Usar hoy', worn: 'Puesto', planned: 'Planeado',
+    noPlan: 'Sin plan', loose: '{n} prendas sueltas', looseOne: '1 prenda suelta', notLogged: 'Sin anotar',
+    clear: 'Quitar plan', plannedToast: '{day}: planeado', clearedToast: 'Plan quitado', noOutfits: 'Aún no tienes outfits.', create: 'Crear un outfit',
+    washFirst: 'Lava antes: {list}', choose: 'Elige un outfit',
+  },
   settings: {
     title: 'Ajustes', appearance: 'Apariencia', theme: 'Tema', language: 'Idioma',
     themes: { system: 'Sistema', light: 'Claro', dark: 'Oscuro' },

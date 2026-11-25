@@ -269,7 +269,7 @@ function PickItem({ g, on, clash, onClick }: { g: Garment; on: boolean; clash?: 
   const { url, isCutout } = useImage(g.imageId)
   const dirty = garmentStatus(g) === 'dirty'
   return (
-    <button onClick={onClick} aria-pressed={on} className="press text-left">
+    <button onClick={onClick} aria-pressed={on} className="press self-start text-left">
       <div className={`relative aspect-square overflow-hidden rounded-[14px] bg-tile transition-shadow ${on ? 'ring-2 ring-ink' : ''}`}>
         {url && <img src={url} alt="" draggable={false} className={`absolute inset-0 size-full ${isCutout ? 'object-contain p-[12%]' : 'object-cover'} ${clash || dirty ? 'opacity-55' : ''}`} />}
         {on && <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full bg-ink text-bg"><Icon name="check" size={14} strokeWidth={2.6} /></span>}

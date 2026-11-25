@@ -2,7 +2,7 @@
 
 Tu armario, en el bolsillo. PWA para el iPhone, local-first: haces una foto a una prenda, el fondo se quita en el propio dispositivo y queda guardada en menos de 10 segundos.
 
-> Estado: **Fase 3** completada: outfits y collage 2D.
+> Estado: **Fase 4** completada: semana y «Usar hoy».
 
 ## Stack
 
@@ -63,6 +63,13 @@ El modelo se sirve desde la propia app, no desde el CDN de IMG.LY. No está en g
 - **Veredicto de color** con las reglas de `harmony.ts`, incluidas las tuyas: «Combina bien», «Sin choques», «Mucho color» o «Rojo y verde chocan». Los neutros (negro, blanco, grises, beige, vaquero, marino…) van con todo.
 - **Usar hoy**: suma un uso a todas las prendas del outfit y deja una entrada en el registro ligada al outfit (para la semana y las estadísticas). Se puede deshacer.
 - Se guarda solo. Un outfit que dejas vacío no se queda guardado. Eliminar se puede deshacer.
+
+## Semana (fase 4)
+
+- **Hoy** arriba: el outfit planeado en grande, con **Usar hoy** (suma un uso a cada prenda) y **Cambiar**. Si no hay plan: «¿Qué te pones hoy?».
+- Los 7 días, de lunes a domingo: toca uno para elegir outfit o quitar el plan (con deshacer). Con ‹ › cambias de semana; «Esta semana» vuelve a la actual.
+- Avisos: si una prenda del outfit está sucia, el día dice «Lava antes: Chaqueta negra». Los días pasados muestran si lo pusiste o las prendas sueltas que anotaste.
+- «Usar hoy» (aquí o en el editor) deja el día como **Puesto** en `DayPlan` y el registro (`WearLog`) ligado al outfit. Al borrar un outfit se quitan sus planes futuros, y vuelven si deshaces.
 
 ## Gestos de iOS
 
@@ -156,7 +163,7 @@ Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de ini
 - [x] **Fase 1**: alta rápida (cámara, recorte, color y categoría), armario con filtros y ficha editable
 - [x] **Fase 2**: estados limpia/usada/sucia (automáticos por usos), «Usada hoy», marcar sucia a mano, lavadora con selección y deshacer
 - [x] **Fase 3**: outfits con collage 2D (mover, escalar, girar), colocación automática, avisos de color y «Usar hoy»
-- [ ] **Fase 4**: calendario semanal y "Usado hoy"
+- [x] **Fase 4**: semana con plan por día, «Usar hoy», avisos de prendas sucias
 - [ ] **Fase 5**: ajustes, copia de seguridad y pulido
 
 Más adelante: recomendador por reglas de color, IA con función de servidor, maniquí 3D, sincronización cifrada con GitHub y compartir con colegas.

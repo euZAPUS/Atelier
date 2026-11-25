@@ -61,7 +61,13 @@ export const en: Dict = {
     verdict: { empty: '', good: 'Goes well together', ok: 'No clashes', busy: 'Lots of colour: try a neutral', clash: '{a} and {b} clash' },
     clashHint: 'clashes with {c}',
   },
-  week: { title: 'Week', soon: 'Plan what to wear each day. Coming in phase 4.' },
+  week: {
+    title: 'Week', today: 'Today', tomorrow: 'Tomorrow', thisWeek: 'This week', prev: 'Previous week', next: 'Next week',
+    todayQ: 'What are you wearing today?', pick: 'Pick outfit', change: 'Change', wear: 'Wear today', worn: 'Worn', planned: 'Planned',
+    noPlan: 'No plan', loose: '{n} loose pieces', looseOne: '1 loose piece', notLogged: 'Not logged',
+    clear: 'Remove plan', plannedToast: '{day}: planned', clearedToast: 'Plan removed', noOutfits: 'You have no outfits yet.', create: 'Create an outfit',
+    washFirst: 'Wash first: {list}', choose: 'Pick an outfit',
+  },
   settings: {
     title: 'Settings', appearance: 'Appearance', theme: 'Theme', language: 'Language',
     themes: { system: 'System', light: 'Light', dark: 'Dark' },
