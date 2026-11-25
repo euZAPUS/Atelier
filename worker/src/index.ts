@@ -200,6 +200,8 @@ export default {
       if (url.pathname === '/identify') {
         const vmodel = keyOk ? ((form.get('vmodel') as string | null) ?? undefined) : undefined
         const { raw, ...id } = await identify(env, bytes, hint, vmodel).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
+        // Cuota diaria agotada: que la app lo sepa (429) y recorte en el móvil, en vez de seguir con una respuesta vacía
+        if (visionError && /4006|neuron|daily free allocation|quota/i.test(visionError)) return json({ error: 'quota', detail: visionError }, 429, h)
         return json({ ...id, visionError, ...(keyOk ? { raw } : {}) }, 200, h)
       }
       // /garment: si la app ya trae la identidad (de /identify), no se repite la visión
@@ -214,7 +216,7 @@ export default {
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
       // Cuota diaria gratis agotada → el móvil usa el recorte local
-      const quota = /neuron|quota|limit|429|capacity/i.test(msg)
+      const quota = /4006|neuron|daily free allocation|quota|limit|429|capacity/i.test(msg)
       return json({ error: quota ? 'quota' : 'failed', detail: msg.slice(0, 300) }, quota ? 429 : 502, h)
     }
   },
