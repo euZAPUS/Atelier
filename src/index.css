@@ -194,3 +194,38 @@ nav.tabbar { view-transition-name: tabbar; }
 /* Tinte justo para mantener el contraste del texto encima (WCAG) */
 .liquid-light { background: light-dark(rgb(255 255 255 / .9), rgb(28 28 30 / .9)); color: var(--ink); border: 1px solid light-dark(var(--line), rgb(255 255 255 / .12)); }
 .liquid-dark { background: rgb(14 14 16 / .94); color: #f4f4f5; }
+
+/* ---------- Barra de pestañas: píldora y lente (ver ui/TabBar.tsx) ---------- */
+.tab-pill {
+  transform-origin: center;
+  will-change: transform;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  transition: background-color .25s, box-shadow .25s, border-color .25s;
+  border: 1px solid transparent;
+}
+/* Pulsada: se convierte en una lente de cristal que sobresale de la barra */
+.tab-pill[data-lens='1'] {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / calc(.28 * var(--lens, 1))), transparent 60%),
+    color-mix(in srgb, var(--ink) 12%, transparent);
+  border-color: rgb(255 255 255 / .22);
+  box-shadow:
+    inset 0 1px 1px rgb(255 255 255 / .55),
+    inset 0 -1px 1px rgb(255 255 255 / .12),
+    0 8px 24px -6px rgb(0 0 0 / .45);
+  -webkit-backdrop-filter: blur(2px) saturate(1.8) brightness(1.08);
+  backdrop-filter: blur(2px) saturate(1.8) brightness(1.08);
+}
+
+/* Botón "+": se hunde al pulsar y vuelve con rebote */
+.fab-spring { transition: transform .5s cubic-bezier(.34, 1.9, .5, 1); cursor: pointer; }
+.fab-spring:active { transform: scale(.86); transition-duration: .12s; transition-timing-function: ease-out; }
+@media (prefers-reduced-motion: reduce) { .fab-spring, .tab-pill { transition: none; } }
+
+/* Filas de listas (iOS): al tocarlas se iluminan en vez de encogerse */
+.group .press { transition: background-color .25s; }
+.group .press:active { transform: none; opacity: 1; background: color-mix(in srgb, var(--ink) 8%, transparent); transition-duration: 0s; }
+
+/* Barra con el título pequeño al hacer scroll (large title de iOS que se pliega) */
+.compact-bar { transition: opacity .2s ease, transform .2s ease; }
+.compact-bar[data-on='0'] { opacity: 0; transform: translateY(-4px); pointer-events: none; }

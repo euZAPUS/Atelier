@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Route, Router, Switch, useLocation } from 'wouter'
 import { useT } from './i18n'
 import { applyTheme, useSettings } from './lib/settings'
+import { useEdgeSwipeBack } from './lib/useEdgeSwipeBack'
 import { resumePending } from './features/capture/store'
 import { Capture } from './pages/Capture'
 import { GarmentDetail } from './pages/GarmentDetail'
@@ -22,8 +23,33 @@ function FirstRun() {
   return null
 }
 
-export function App() {
+// Pantallas, con "deslizar desde el borde para volver" en las interiores
+function Pages() {
   const t = useT()
+  const [loc] = useLocation()
+  const ref = useRef<HTMLDivElement>(null)
+  const inner = /^\/(prenda|lavadora|kit)/.test(loc)
+  const back = useCallback(() => history.back(), [])
+  useEdgeSwipeBack(ref, inner, back)
+  return (
+    <div ref={ref} className="min-h-dvh bg-bg">
+        <Switch>
+          <Route path="/"><Wardrobe /></Route>
+          <Route path="/bienvenida"><Onboarding /></Route>
+          <Route path="/nueva"><Capture /></Route>
+          <Route path="/lavadora"><Washer /></Route>
+          <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
+          <Route path="/outfits"><Placeholder title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
+          <Route path="/semana"><Placeholder title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
+          <Route path="/ajustes"><Settings /></Route>
+          <Route path="/kit"><Kit /></Route>
+          <Route><Wardrobe /></Route>
+        </Switch>
+    </div>
+  )
+}
+
+export function App() {
   const { theme, lang } = useSettings()
 
   useEffect(() => {
@@ -44,18 +70,7 @@ export function App() {
     <div className="mx-auto max-w-xl">
       {/* Franja bajo la barra de estado: el contenido pasa por debajo sin chocar con la hora */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-50 bg-bg/85 backdrop-blur-xl" style={{ height: 'env(safe-area-inset-top)' }} />
-      <Switch>
-        <Route path="/"><Wardrobe /></Route>
-        <Route path="/bienvenida"><Onboarding /></Route>
-        <Route path="/nueva"><Capture /></Route>
-        <Route path="/lavadora"><Washer /></Route>
-        <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
-        <Route path="/outfits"><Placeholder title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
-        <Route path="/semana"><Placeholder title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
-        <Route path="/ajustes"><Settings /></Route>
-        <Route path="/kit"><Kit /></Route>
-        <Route><Wardrobe /></Route>
-      </Switch>
+      <Pages />
       <TabBar />
       <UpdatePrompt />
       <Toaster />
