@@ -9,6 +9,8 @@ import { GarmentDetail } from './pages/GarmentDetail'
 import { Kit } from './pages/Kit'
 import { Washer } from './pages/Washer'
 import { Onboarding, onboarded } from './pages/Onboarding'
+import { OutfitEditor } from './pages/OutfitEditor'
+import { Outfits } from './pages/Outfits'
 import { Placeholder } from './pages/Placeholder'
 import { Settings } from './pages/Settings'
 import { Wardrobe } from './pages/Wardrobe'
@@ -28,7 +30,7 @@ function Pages() {
   const t = useT()
   const [loc] = useLocation()
   const ref = useRef<HTMLDivElement>(null)
-  const inner = /^\/(prenda|lavadora|kit)/.test(loc)
+  const inner = /^\/(prenda|lavadora|kit|outfits\/)/.test(loc)
   const back = useCallback(() => history.back(), [])
   useEdgeSwipeBack(ref, inner, back)
   return (
@@ -39,7 +41,8 @@ function Pages() {
           <Route path="/nueva"><Capture /></Route>
           <Route path="/lavadora"><Washer /></Route>
           <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
-          <Route path="/outfits"><Placeholder title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
+          <Route path="/outfits"><Outfits /></Route>
+          <Route path="/outfits/:id">{(p) => <OutfitEditor key={p.id} id={p.id} />}</Route>
           <Route path="/semana"><Placeholder title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
           <Route path="/ajustes"><Settings /></Route>
           <Route path="/kit"><Kit /></Route>

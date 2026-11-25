@@ -52,3 +52,30 @@ export async function setDirty(id: string, dirty: boolean): Promise<Undo> {
   await db.garments.update(id, dirty ? { manualDirty: true, updatedAt: Date.now() } : { ...applyWash(), updatedAt: Date.now() })
   return async () => { await db.garments.update(id, before) }
 }
+
+/** "Me lo pongo hoy" con un outfit: +1 uso a cada prenda y una sola entrada en el registro, ligada al outfit. */
+export async function wearOutfit(outfitId: string, garmentIds: string[], date = today()): Promise<Undo> {
+  const logId = newId()
+  const before = new Map<string, ReturnType<typeof snapshot>>()
+  await db.transaction('rw', db.garments, db.wearLog, async () => {
+    for (const g of await db.garments.bulkGet(garmentIds)) {
+      if (!g) continue
+      before.set(g.id, snapshot(g))
+      await db.garments.update(g.id, { ...applyWear(g, date), updatedAt: Date.now() })
+    }
+    await db.wearLog.add({ id: logId, date, outfitId, garmentIds: [...before.keys()] })
+  })
+  return async () => {
+    await db.transaction('rw', db.garments, db.wearLog, async () => {
+      for (const [id, s] of before) await db.garments.update(id, s)
+      await db.wearLog.delete(logId)
+    })
+  }
+}
+
+/** Eliminar un outfit (con deshacer). */
+export async function deleteOutfit(id: string): Promise<Undo> {
+  const o = await db.outfits.get(id)
+  await db.outfits.delete(id)
+  return async () => { if (o) await db.outfits.put(o) }
+}

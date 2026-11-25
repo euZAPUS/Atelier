@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation } from 'wouter'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { useT } from '../i18n'
@@ -28,7 +28,7 @@ export function TabBar() {
     { to: '/ajustes', icon: 'settings', label: t.nav.settings },
   ]
   const active = tabs.findIndex((tab) => (tab.to === '/' ? loc === '/' || loc.startsWith('/prenda') : loc.startsWith(tab.to)))
-  const hidden = loc.startsWith('/nueva') || loc.startsWith('/bienvenida') || loc.startsWith('/lavadora')
+  const hidden = loc.startsWith('/nueva') || loc.startsWith('/bienvenida') || loc.startsWith('/lavadora') || loc.startsWith('/outfits/')
 
   const barRef = useRef<HTMLDivElement>(null)
   const pillRef = useRef<HTMLSpanElement>(null)
@@ -82,6 +82,9 @@ export function TabBar() {
     const a = anim.current
     return () => { window.removeEventListener('resize', onResize); cancelAnimationFrame(a.raf); a.raf = 0 }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Al reaparecer (al volver del editor, de la lavadora…) la píldora es un elemento nuevo: hay que pintarla
+  useLayoutEffect(() => { if (!hidden) paint() }, [hidden]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const indexAt = (clientX: number) => {
     const r = barRef.current!.getBoundingClientRect()

@@ -229,3 +229,11 @@ nav.tabbar { view-transition-name: tabbar; }
 /* Barra con el título pequeño al hacer scroll (large title de iOS que se pliega) */
 .compact-bar { transition: opacity .2s ease, transform .2s ease; }
 .compact-bar[data-on='0'] { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+
+/* Outfits: marco de la prenda seleccionada en el collage */
+.collage-sel { border: 1.5px dashed color-mix(in srgb, var(--ink) 55%, transparent); animation: sel-in .25s cubic-bezier(.34,1.6,.5,1); }
+@keyframes sel-in { from { transform: scale(.9); opacity: 0 } }
+.sheet-in { animation: sheet-in .42s cubic-bezier(.22,1.2,.36,1); }
+@keyframes sheet-in { from { transform: translateY(100%) } }
+.fade-in { animation: fade-in .25s ease-out; }
+@keyframes fade-in { from { opacity: 0 } }

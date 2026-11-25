@@ -2,7 +2,7 @@
 
 Tu armario, en el bolsillo. PWA para el iPhone, local-first: haces una foto a una prenda, el fondo se quita en el propio dispositivo y queda guardada en menos de 10 segundos.
 
-> Estado: **Fase 2** completada: estados y lavadora.
+> Estado: **Fase 3** completada: outfits y collage 2D.
 
 ## Stack
 
@@ -55,13 +55,28 @@ También acepta fotos de la galería y recortes pegados: si copias una prenda co
 
 El modelo se sirve desde la propia app, no desde el CDN de IMG.LY. No está en git: `npm run fetch-model` lo descarga del paquete oficial y copia solo lo que se usa. La primera vez se descarga una sola vez (unos 110 MB con WebGPU) y el service worker lo guarda para usarlo sin conexión.
 
+## Outfits (fase 3)
+
+- **Nuevo outfit** → **Añadir**: hoja con tu armario por categorías. Tocar añade o quita. Si un color chocaría con lo que ya llevas, la prenda sale marcada («choca con rojo»), y las sucias también.
+- Cada prenda se **coloca sola** según su categoría, como extendida en la cama: gorra arriba, parte de arriba, pantalón, zapatillas abajo y accesorios a un lado.
+- En el lienzo, **un dedo mueve** y **dos dedos escalan y giran**. Tocar una prenda la trae delante, y tienes los botones *Delante*, *Detrás* y *Quitar*. En el PC: rueda para escalar y Mayús + rueda para girar.
+- **Veredicto de color** con las reglas de `harmony.ts`, incluidas las tuyas: «Combina bien», «Sin choques», «Mucho color» o «Rojo y verde chocan». Los neutros (negro, blanco, grises, beige, vaquero, marino…) van con todo.
+- **Usar hoy**: suma un uso a todas las prendas del outfit y deja una entrada en el registro ligada al outfit (para la semana y las estadísticas). Se puede deshacer.
+- Se guarda solo. Un outfit que dejas vacío no se queda guardado. Eliminar se puede deshacer.
+
+## Gestos de iOS
+
+- **Barra de pestañas**: mantén pulsado y desliza; la píldora se vuelve una lente que sigue al dedo, se estira con la velocidad y rebota con muelle (`lib/spring.ts`) al soltar.
+- **Deslizar desde el borde izquierdo** para volver en la ficha, la lavadora, el editor de outfits y el kit.
+- El **título grande se pliega** en una barra compacta al hacer scroll, y las filas de los grupos se iluminan al pulsar.
+
 ## Estructura
 
 ```
 src/
   db/        esquema Dexie y tipos (Garment, Outfit, DayPlan, WearLog, Settings)
   domain/    reglas puras: categorías, lavado, color (k-means/Lab), nombres automáticos
-  features/  capture/ (cola de alta rápida), wardrobe/ (tarjetas)
+  features/  capture/ (cola de alta rápida), wardrobe/ (tarjetas), outfits/ (collage)
   i18n/      es.ts (fuente) y en.ts
   lib/       ajustes, almacenamiento, imagen (canvas), recorte (imgly), navegación con transiciones
   ui/        sistema de diseño: Button, Chip, Icon, PageHeader, TabBar…
@@ -140,7 +155,7 @@ Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de ini
 - [x] **Fase 0**: base, PWA, sistema de diseño y GitHub Pages
 - [x] **Fase 1**: alta rápida (cámara, recorte, color y categoría), armario con filtros y ficha editable
 - [x] **Fase 2**: estados limpia/usada/sucia (automáticos por usos), «Usada hoy», marcar sucia a mano, lavadora con selección y deshacer
-- [ ] **Fase 3**: outfits y collage 2D
+- [x] **Fase 3**: outfits con collage 2D (mover, escalar, girar), colocación automática, avisos de color y «Usar hoy»
 - [ ] **Fase 4**: calendario semanal y "Usado hoy"
 - [ ] **Fase 5**: ajustes, copia de seguridad y pulido
 

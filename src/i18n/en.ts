@@ -51,7 +51,16 @@ export const en: Dict = {
     uses: '{n} of {max} wears', cta: 'They are clean ({n})', done: '{n} items clean', doneOne: '1 item clean',
     empty: 'Nothing to wash', emptyBody: 'Your whole wardrobe is clean.', banner: '{n} items to wash', bannerOne: '1 item to wash', bannerCta: 'Washer',
   },
-  outfits: { title: 'Outfits', soon: 'Build outfits as a collage here. Coming in phase 3.' },
+  outfits: {
+    title: 'Outfits', new: 'New outfit', untitled: 'Outfit {n}', pieces: '{n} pieces', piecesOne: '1 piece',
+    emptyTitle: 'Build your first outfit', emptyBody: 'Pick pieces from your wardrobe and lay them out as if on your bed.', emptyNoClothes: 'Add some clothes to your wardrobe first.',
+    add: 'Add pieces', addShort: 'Add', done: 'Done', name: 'Outfit name', hint: 'Drag to move · pinch with two fingers to scale and rotate',
+    canvasEmpty: 'Tap “Add pieces” to start', remove: 'Remove', front: 'Front', back: 'Back',
+    wear: 'Wear today', woreToast: 'Logged a wear on {n} pieces', deleted: 'Outfit deleted', delete: 'Delete outfit',
+    hasDirty: '{n} dirty', hasDirtyMany: '{n} dirty', inOutfit: 'In outfit',
+    verdict: { empty: '', good: 'Goes well together', ok: 'No clashes', busy: 'Lots of colour: try a neutral', clash: '{a} and {b} clash' },
+    clashHint: 'clashes with {c}',
+  },
   week: { title: 'Week', soon: 'Plan what to wear each day. Coming in phase 4.' },
   settings: {
     title: 'Settings', appearance: 'Appearance', theme: 'Theme', language: 'Language',

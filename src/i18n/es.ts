@@ -49,7 +49,16 @@ export const es = {
     uses: '{n} de {max} usos', cta: 'Ya están limpias ({n})', done: '{n} prendas limpias', doneOne: '1 prenda limpia',
     empty: 'Nada que lavar', emptyBody: 'Todo tu armario está limpio.', banner: '{n} prendas para lavar', bannerOne: '1 prenda para lavar', bannerCta: 'Lavadora',
   },
-  outfits: { title: 'Outfits', soon: 'Aquí montarás outfits como collage. Llega en la fase 3.' },
+  outfits: {
+    title: 'Outfits', new: 'Nuevo outfit', untitled: 'Outfit {n}', pieces: '{n} prendas', piecesOne: '1 prenda',
+    emptyTitle: 'Monta tu primer outfit', emptyBody: 'Elige prendas de tu armario y colócalas como si las extendieras en la cama.', emptyNoClothes: 'Primero añade alguna prenda a tu armario.',
+    add: 'Añadir prendas', addShort: 'Añadir', done: 'Listo', name: 'Nombre del outfit', hint: 'Arrastra para mover · pellizca con dos dedos para escalar y girar',
+    canvasEmpty: 'Toca «Añadir prendas» para empezar', remove: 'Quitar', front: 'Delante', back: 'Detrás',
+    wear: 'Usar hoy', woreToast: 'Uso anotado en {n} prendas', deleted: 'Outfit eliminado', delete: 'Eliminar outfit',
+    hasDirty: '{n} sucia', hasDirtyMany: '{n} sucias', inOutfit: 'En el outfit',
+    verdict: { empty: '', good: 'Combina bien', ok: 'Sin choques', busy: 'Mucho color: prueba con algún neutro', clash: '{a} y {b} chocan' },
+    clashHint: 'choca con {c}',
+  },
   week: { title: 'Semana', soon: 'Planifica qué te pones cada día. Llega en la fase 4.' },
   settings: {
     title: 'Ajustes', appearance: 'Apariencia', theme: 'Tema', language: 'Idioma',
