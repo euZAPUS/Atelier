@@ -94,13 +94,13 @@ export function TabBar() {
     if (e.button !== 0) return
     barRef.current!.setPointerCapture(e.pointerId)
     gesture.current = { id: e.pointerId, startX: e.clientX, moved: false, lastX: e.clientX, lastT: performance.now(), handled: false }
-    anim.current.lens.target = 1 // la píldora "salta" como una lente
-    kick()
+    // Solo se vuelve lente si pulsas SOBRE la píldora (como en iOS). En otra pestaña, es un toque normal.
+    if (indexAt(e.clientX) === Math.round(anim.current.x.value)) { anim.current.lens.target = 1; kick() }
   }
   const onMove = (e: React.PointerEvent) => {
     const g = gesture.current
     if (!g || g.id !== e.pointerId) return
-    if (!g.moved && Math.abs(e.clientX - g.startX) > 6) g.moved = true
+    if (!g.moved && Math.abs(e.clientX - g.startX) > 6) { g.moved = true; anim.current.lens.target = 1 } // al arrastrar, siempre lente
     if (!g.moved) return
     const r = barRef.current!.getBoundingClientRect(), w = slot()
     const pos = (e.clientX - r.left - TAB_INSET) / w - 0.5
