@@ -2,7 +2,7 @@
 
 Tu armario, en el bolsillo. PWA para el iPhone, local-first: haces una foto a una prenda, el fondo se quita en el propio dispositivo y queda guardada en menos de 10 segundos.
 
-> Estado: **Fase 1**: alta rápida de prendas y armario.
+> Estado: **Fase 2** completada: estados y lavadora.
 
 ## Stack
 
@@ -139,7 +139,7 @@ Para instalarla: Safari → la URL → Compartir → **Añadir a pantalla de ini
 
 - [x] **Fase 0**: base, PWA, sistema de diseño y GitHub Pages
 - [x] **Fase 1**: alta rápida (cámara, recorte, color y categoría), armario con filtros y ficha editable
-- [ ] **Fase 2**: estados limpia/usada/sucia y lavadora
+- [x] **Fase 2**: estados limpia/usada/sucia (automáticos por usos), «Usada hoy», marcar sucia a mano, lavadora con selección y deshacer
 - [ ] **Fase 3**: outfits y collage 2D
 - [ ] **Fase 4**: calendario semanal y "Usado hoy"
 - [ ] **Fase 5**: ajustes, copia de seguridad y pulido

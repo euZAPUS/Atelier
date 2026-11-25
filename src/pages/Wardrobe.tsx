@@ -9,6 +9,7 @@ import { garmentStatus } from '../domain/wash'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { GarmentCard } from '../features/wardrobe/GarmentCard'
 import { fmt, useT } from '../i18n'
+import { TLink } from '../lib/nav'
 import { useSettings } from '../lib/settings'
 import { buttonBase, buttonStyles } from '../ui/Button'
 import { Icon } from '../ui/Icon'
@@ -51,6 +52,9 @@ export function Wardrobe() {
     (!cat || g.category === cat) && (!type || g.type === type) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
     (!query || norm(`${displayName(g, lang)} ${g.brand ?? ''} ${g.subcategory ?? ''} ${g.type ? typeLabel(g.category, g.type, lang) : ''} ${t.categories[g.category]} ${colorLabel(g.color.name, lang)}`).includes(query)))
   const filtered = cat || type || color || status || query
+  const dirtyList = garments.filter((_, i) => statuses[i] === 'dirty')
+  const dirtyCount = dirtyList.length
+  const dirtyNames = dirtyList.slice(0, 3).map((g) => displayName(g, lang)).join(', ') + (dirtyCount > 3 ? '…' : '')
   const count = garments.length === 1 ? t.wardrobe.countOne : fmt(t.wardrobe.count, { n: garments.length })
 
   return (
@@ -76,6 +80,18 @@ export function Wardrobe() {
         </section>
       ) : (
         <>
+          {dirtyCount > 0 && (
+            <div className="page-in px-4 pb-3">
+              <TLink href="/lavadora" className="card press flex items-center gap-3 p-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-dirty/15 text-dirty"><Icon name="washer" size={22} strokeWidth={1.7} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[0.9375rem] font-semibold">{dirtyCount === 1 ? t.washer.bannerOne : fmt(t.washer.banner, { n: dirtyCount })}</span>
+                  <span className="block truncate text-[0.8125rem] text-muted">{dirtyNames}</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-accent px-3.5 py-1.5 text-[0.8125rem] font-semibold text-accent-ink">{t.washer.bannerCta}</span>
+              </TLink>
+            </div>
+          )}
           <div className="sticky z-30 space-y-2 bg-bg/80 px-4 pt-1 pb-2 backdrop-blur-xl" style={{ top: 'env(safe-area-inset-top)' }}>
             <LiquidGlass borderRadius={12} className="flex h-10 items-center gap-2 px-3">
               <Icon name="search" size={18} strokeWidth={1.8} className="shrink-0 text-muted" />

@@ -6,11 +6,13 @@ import { resumePending } from './features/capture/store'
 import { Capture } from './pages/Capture'
 import { GarmentDetail } from './pages/GarmentDetail'
 import { Kit } from './pages/Kit'
+import { Washer } from './pages/Washer'
 import { Onboarding, onboarded } from './pages/Onboarding'
 import { Placeholder } from './pages/Placeholder'
 import { Settings } from './pages/Settings'
 import { Wardrobe } from './pages/Wardrobe'
 import { TabBar } from './ui/TabBar'
+import { Toaster } from './ui/Toast'
 import { UpdatePrompt } from './ui/UpdatePrompt'
 
 // Primera vez: introducción (dentro del Router para respetar la ruta base)
@@ -46,6 +48,7 @@ export function App() {
         <Route path="/"><Wardrobe /></Route>
         <Route path="/bienvenida"><Onboarding /></Route>
         <Route path="/nueva"><Capture /></Route>
+        <Route path="/lavadora"><Washer /></Route>
         <Route path="/prenda/:id">{(p) => <GarmentDetail key={p.id} id={p.id} />}</Route>
         <Route path="/outfits"><Placeholder title={t.outfits.title} body={t.outfits.soon} icon="outfit" /></Route>
         <Route path="/semana"><Placeholder title={t.week.title} body={t.week.soon} icon="calendar" /></Route>
@@ -55,6 +58,7 @@ export function App() {
       </Switch>
       <TabBar />
       <UpdatePrompt />
+      <Toaster />
     </div>
     </Router>
   )

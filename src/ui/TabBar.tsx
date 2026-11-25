@@ -10,7 +10,7 @@ import { LiquidGlass } from './LiquidGlass'
 export function TabBar() {
   const t = useT()
   const [loc] = useLocation()
-  if (loc.startsWith('/nueva') || loc.startsWith('/bienvenida')) return null
+  if (loc.startsWith('/nueva') || loc.startsWith('/bienvenida') || loc.startsWith('/lavadora')) return null
   const tabs: { to: string; icon: IconName; label: string }[] = [
     { to: '/', icon: 'hanger', label: t.nav.wardrobe },
     { to: '/outfits', icon: 'outfit', label: t.nav.outfits },

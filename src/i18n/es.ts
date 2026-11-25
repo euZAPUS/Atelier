@@ -37,11 +37,17 @@ export const es = {
     added: 'Alta', lastWorn: 'Último uso', neverWorn: 'Nunca', retry: 'Reintentar recorte', enhance: 'Mejorar con IA', enhancing: 'Generando…',
     retrying: 'Recortando…', cutFailed: 'El recorte falló', archive: 'Archivar', unarchive: 'Recuperar',
     delete: 'Eliminar', confirmDelete: '¿Eliminar esta prenda para siempre?', notFound: 'Esta prenda no existe',
-    statWash: 'antes de lavar', statTotal: 'veces puesta', statLast: 'último uso', days: '{n} d',
+    statWash: 'antes de lavar', statTotal: 'veces puesta', statLast: 'último uso', days: '{n} d', todayShort: 'hoy',
     ownColors: 'Sus colores', matches: 'Combina con', avoid: 'Evita', matchesOwned: 'Combina con tu armario', clashesOwned: 'Mejor no con',
     details: 'Detalles', noBrand: 'Sin marca', notesPlaceholder: 'Talla, dónde la compraste, cómo lavarla…',
     washSection: 'Lavado', washNever: 'No se ensucia con el uso', washProgress: '{n} de {max} usos antes de lavar',
-    dirtyManual: 'Marcar como sucia', cleanManual: 'Marcar como limpia',
+    dirtyManual: 'Sucia', cleanManual: 'Marcar como limpia', wore: 'Usada hoy', washed: 'Lavada',
+    woreToast: 'Uso anotado', washedToast: 'Lavada: vuelve a estar limpia', dirtyToast: 'Marcada como sucia',
+  },
+  washer: {
+    pill: 'Lavadora', title: 'Poner lavadora', subtitle: '{dirty} sucias · {worn} usadas', alsoWorn: 'Usadas (por si quieres meterlas)',
+    uses: '{n} de {max} usos', cta: 'Ya están limpias ({n})', done: '{n} prendas limpias', doneOne: '1 prenda limpia',
+    empty: 'Nada que lavar', emptyBody: 'Todo tu armario está limpio.', banner: '{n} prendas para lavar', bannerOne: '1 prenda para lavar', bannerCta: 'Lavadora',
   },
   outfits: { title: 'Outfits', soon: 'Aquí montarás outfits como collage. Llega en la fase 3.' },
   week: { title: 'Semana', soon: 'Planifica qué te pones cada día. Llega en la fase 4.' },
@@ -68,7 +74,7 @@ export const es = {
     s3Title: 'Para el día a día', s3Body: 'Sabe qué está limpio, qué has usado y qué toca lavar. Tus datos se quedan en tu iPhone.',
     install: 'Para usarla como una app: en Safari, Compartir → Añadir a pantalla de inicio.',
   },
-  common: { back: 'Volver', close: 'Cerrar', soonTag: 'Próximamente', save: 'Guardar', cancel: 'Cancelar' },
+  common: { undo: 'Deshacer', back: 'Volver', close: 'Cerrar', soonTag: 'Próximamente', save: 'Guardar', cancel: 'Cancelar' },
 }
 
 // Misma forma en todos los idiomas; TypeScript avisa si falta una clave.

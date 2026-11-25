@@ -6,10 +6,11 @@ import { CATEGORIES, defaultWash, typesOf, type CategoryId } from '../domain/cat
 import { NAMED_COLORS } from '../domain/color'
 import { clashesFor, matchesFor } from '../domain/harmony'
 import { colorLabel, displayName, typeLabel } from '../domain/naming'
-import { garmentStatus } from '../domain/wash'
+import { daysAgo, garmentStatus } from '../domain/wash'
 import { reprocess } from '../features/capture/store'
 import { MatchRow } from '../features/wardrobe/MatchRow'
 import { fmt, useT } from '../i18n'
+import { setDirty, wearGarment } from '../lib/actions'
 import { useNav } from '../lib/nav'
 import { useSettings } from '../lib/settings'
 import { useImage } from '../lib/useImage'
@@ -19,6 +20,7 @@ import { Icon } from '../ui/Icon'
 import { LiquidGlass } from '../ui/LiquidGlass'
 import { HeaderPill, NavButton, PageHeader } from '../ui/PageHeader'
 import { StatusBadge } from '../ui/StatusBadge'
+import { toast } from '../ui/Toast'
 
 const update = (id: string, patch: Partial<Garment>) => db.garments.update(id, { ...patch, updatedAt: Date.now() })
 
@@ -94,7 +96,7 @@ export function GarmentDetail({ id }: { id: string }) {
   }
   const washText = g.washAfter === null ? t.garment.washNever : fmt(t.garment.washProgress, { n: g.wearsSinceWash, max: g.washAfter })
 
-  const daysSince = g.lastWornAt ? Math.max(0, Math.round((Date.now() - new Date(g.lastWornAt).getTime()) / 86_400_000)) : null
+  const daysSince = g.lastWornAt ? daysAgo(g.lastWornAt) : null
   const subtitle = [g.brand, g.type ? typeLabel(g.category, g.type, lang) : t.categories[g.category]].filter(Boolean).join(' · ')
   const matches = g.color.name !== 'pending' ? matchesFor(g.color.name) : []
   const clashes = g.color.name !== 'pending' ? clashesFor(g.color.name) : []
@@ -131,6 +133,24 @@ export function GarmentDetail({ id }: { id: string }) {
             <StatusBadge status={st} pill />
             <span className="text-[0.875rem] text-muted">{washText}</span>
           </div>
+          {/* Acciones del día a día */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button variant="primary" icon="check" onClick={async () => {
+              const undo = await wearGarment(g.id)
+              toast(t.garment.woreToast, { label: t.common.undo, run: undo })
+            }}>{t.garment.wore}</Button>
+            {st === 'dirty' ? (
+              <Button icon="washer" onClick={async () => {
+                const undo = await setDirty(g.id, false)
+                toast(t.garment.washedToast, { label: t.common.undo, run: undo })
+              }}>{t.garment.washed}</Button>
+            ) : (
+              <Button icon="washer" onClick={async () => {
+                const undo = await setDirty(g.id, true)
+                toast(t.garment.dirtyToast, { label: t.common.undo, run: undo })
+              }}>{t.garment.dirtyManual}</Button>
+            )}
+          </div>
         </div>
 
         {/* Cifras grandes */}
@@ -138,7 +158,7 @@ export function GarmentDetail({ id }: { id: string }) {
           {[
             [g.washAfter === null ? '∞' : `${g.wearsSinceWash}/${g.washAfter}`, t.garment.statWash],
             [String(g.wearsTotal), t.garment.statTotal],
-            [daysSince === null ? '—' : fmt(t.garment.days, { n: daysSince }), t.garment.statLast],
+            [daysSince === null ? '—' : daysSince === 0 ? t.garment.todayShort : fmt(t.garment.days, { n: daysSince }), t.garment.statLast],
           ].map(([v, k]) => (
             <div key={k}><b className="block text-[1.5rem] font-normal tracking-tight tabular-nums">{v}</b><span className="block pr-2 text-[0.75rem] leading-tight text-muted">{k}</span></div>
           ))}
