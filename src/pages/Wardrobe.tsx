@@ -107,15 +107,6 @@ export function Wardrobe() {
               </button>
             </div>
           )}
-          {backupDue(garments.length) && (
-            <div className="page-in px-4 pb-3">
-              <TLink href="/ajustes" className="press flex items-center gap-2.5 rounded-[14px] border border-line px-3 py-2.5 text-[0.875rem]">
-                <Icon name="download" size={18} strokeWidth={1.8} className="shrink-0 text-muted" />
-                <span className="min-w-0 flex-1 text-muted">{t.wardrobe.backupHint}</span>
-                <Icon name="chevron" size={16} className="shrink-0 text-faint" />
-              </TLink>
-            </div>
-          )}
           {dirtyCount > 0 && (
             <div className="page-in px-4 pb-3">
               <TLink href="/lavadora" className="card press flex items-center gap-3 p-3">
@@ -165,6 +156,15 @@ export function Wardrobe() {
             <div className="page-in px-4 pt-12 text-center">
               <p className="text-lg font-semibold">{t.wardrobe.noMatch}</p>
               <button className="press mt-2 text-[0.9375rem] font-medium text-muted underline" onClick={() => { setCat(null); setColor(null); setStatus(null); setQ(''); setReview(false) }}>{t.wardrobe.clearFilters}</button>
+            </div>
+          )}
+          {backupDue(garments.length) && !filtered && (
+            <div className="px-4 pt-8">
+              <TLink href="/ajustes" className="press flex items-center gap-2.5 rounded-[14px] border border-line px-3 py-2.5 text-[0.875rem]">
+                <Icon name="download" size={18} strokeWidth={1.8} className="shrink-0 text-muted" />
+                <span className="min-w-0 flex-1 text-muted">{t.wardrobe.backupHint}</span>
+                <Icon name="chevron" size={16} className="shrink-0 text-faint" />
+              </TLink>
             </div>
           )}
         </>

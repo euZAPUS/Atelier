@@ -27,7 +27,7 @@ function Row({ g, on, toggle, index }: { g: Garment; on: boolean; toggle: () => 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[0.9375rem] font-medium">{displayName(g, lang)}</span>
         <span className="mt-0.5 flex items-center gap-2"><StatusBadge status={garmentStatus(g)} />
-          {g.washAfter !== null && <span className="text-[0.8125rem] text-muted">{fmt(t.washer.uses, { n: g.wearsSinceWash, max: g.washAfter })}</span>}
+          {g.washAfter !== null && <span className="text-[0.8125rem] text-muted">{fmt(g.wearsSinceWash >= g.washAfter ? t.washer.usesDue : t.washer.uses, { n: g.wearsSinceWash, max: g.washAfter })}</span>}
         </span>
       </span>
       <span className={`grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors ${on ? 'border-transparent bg-accent text-accent-ink' : 'border-line-strong'}`}>
@@ -66,7 +66,7 @@ export function Washer() {
   return (
     <div className="flex min-h-dvh flex-col" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <PageHeader left={<NavButton icon="back" label={t.common.back} onClick={back} />} center={<HeaderPill icon="washer">{t.washer.pill}</HeaderPill>}
-        title={t.washer.title} subtitle={all ? fmt(t.washer.subtitle, { dirty: dirty.length, worn: worn.length }) : undefined} />
+        title={t.washer.title} subtitle={all ? fmt(t.washer.subtitle, { dirty: dirty.length === 1 ? t.washer.dirtyOne : fmt(t.washer.dirtyN, { n: dirty.length }), worn: worn.length === 1 ? t.washer.wornOne : fmt(t.washer.wornN, { n: worn.length }) }) : undefined} />
       {all && !dirty.length && !worn.length ? (
         <div className="page-in px-4">
           <div className="card flex flex-col items-center px-6 py-10 text-center">

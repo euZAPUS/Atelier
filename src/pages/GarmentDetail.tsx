@@ -94,7 +94,7 @@ export function GarmentDetail({ id }: { id: string }) {
     setBusy(false)
     if (r.aiFallback) alert(t.capture.fallback[r.aiFallback])
   }
-  const washText = g.washAfter === null ? t.garment.washNever : fmt(t.garment.washProgress, { n: g.wearsSinceWash, max: g.washAfter })
+  const washText = g.washAfter === null ? t.garment.washNever : fmt(g.wearsSinceWash >= g.washAfter ? t.garment.washDue : t.garment.washProgress, { n: g.wearsSinceWash, max: g.washAfter })
 
   const daysSince = g.lastWornAt ? daysAgo(g.lastWornAt) : null
   const subtitle = [g.brand, g.type ? typeLabel(g.category, g.type, lang) : t.categories[g.category]].filter(Boolean).join(' · ')

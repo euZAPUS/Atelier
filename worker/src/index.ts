@@ -121,6 +121,14 @@ Look carefully at how long the sleeves are before choosing the type, and mention
         category = t.category; type = t.type; description = t.description
       }
     }
+    // Sudaderas: ¿tiene capucha? (si no se dice, el generador a veces la quita)
+    if (!sideways && category === 'hoodies') {
+      const top = await askTop(env, dataUrl, vmodel).catch(() => null)
+      if (top?.collar.includes('hood')) {
+        type = top.buttons.startsWith('zip') ? 'zip' : 'hoodie'
+        if (!/\bhood/i.test(description)) description = `${description.replace(/[.\s]+$/, '')}, with a hood`.slice(0, 160)
+      }
+    }
     return { category, type, description, colors, rotation, sideways, raw: text.slice(0, 400) }
   } catch {
     return { category: null, description: '', colors: [], rotation: 0 }
@@ -194,7 +202,7 @@ function prompts(what: string, keyName: string): string[] {
   // prohibiendo copiar texturas del entorno e inventar logos o capuchas.
   return [
     `Turn this photo into a professional e-commerce product photo of the ${what}. Keep only that one garment and remove everything else: bed, sheets, blankets, bags, shoes, floor. ` +
-      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, sleeve length, colours, collar and stripes. Remove the hanger. ` +
+      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, sleeve length, hood, colours, collar and stripes. Remove the hanger. ` +
       `Do not add logos, text, hoods or pockets. Do not copy patterns or textures from the surroundings onto the garment. Background: plain solid ${keyName}, evenly lit.`,
     `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, same sleeve length, nothing added, no hanger.`,
     `${what}, front view, flat lay, centered, plain ${keyName} background`,
