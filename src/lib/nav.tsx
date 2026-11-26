@@ -8,9 +8,10 @@ type VTDocument = Document & { startViewTransition?: (cb: () => void) => VT }
 /** Navega con View Transitions (Safari 18+); si no hay soporte, navega sin más. */
 export function useNav() {
   const [, navigate] = useLocation()
-  return (to: string, opts?: { replace?: boolean }) => {
+  return (to: string, opts?: { replace?: boolean; instant?: boolean }) => {
     const doc = document as VTDocument
-    if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return navigate(to, opts)
+    // instant: sin transición (cambiar de pestaña en iOS es inmediato; la animación la pone la píldora)
+    if (opts?.instant || !doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return navigate(to, opts)
     const vt = doc.startViewTransition(() => flushSync(() => navigate(to, opts)))
     // Si iOS cambia el viewport a mitad (al volver de la cámara) la animación se cancela: la navegación sigue igual
     vt.ready.catch(() => {}); vt.finished.catch(() => {})

@@ -137,7 +137,7 @@ export function TabBar() {
     a.stretch.target = 0
     g.handled = true
     kick()
-    if (idx !== active) go(tabs[idx].to)
+    if (idx !== active) go(tabs[idx].to, { instant: true })
     // el click que sigue al pointerup ya está atendido
     setTimeout(() => { gesture.current = null }, 0)
   }
@@ -152,7 +152,8 @@ export function TabBar() {
   return (
     <nav className="tabbar fixed inset-x-0 bottom-0 z-40 px-4" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 14px)' }}>
       <div className="mx-auto flex max-w-md items-center gap-2.5">
-        <LiquidGlass borderRadius={32} className="h-16 flex-1 !overflow-visible">
+        <div className="relative h-16 flex-1">
+          <LiquidGlass borderRadius={32} className="!absolute inset-0" />
           <div ref={barRef} className="relative flex h-full touch-none items-center select-none" style={{ padding: TAB_INSET }}
             onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}>
             {active >= 0 && (
@@ -172,7 +173,7 @@ export function TabBar() {
               </TLink>
             ))}
           </div>
-        </LiquidGlass>
+        </div>
         <CaptureInput ariaLabel={t.nav.add}
           className="fab-spring grid size-16 shrink-0 place-items-center rounded-full bg-accent text-accent-ink shadow-[0_10px_30px_-10px_rgb(0_0_0/.5),inset_0_1px_1px_rgb(255_255_255/.5)]">
           <Icon name="plus" size={28} strokeWidth={2.1} />

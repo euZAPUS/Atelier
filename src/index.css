@@ -161,7 +161,9 @@ img { -webkit-user-drag: none; -webkit-touch-callout: none; }
 @keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }
 ::view-transition-group(*) { animation-duration: .3s; animation-timing-function: var(--ease-out); }
 nav.tabbar { view-transition-name: tabbar; }
-::view-transition-old(tabbar), ::view-transition-new(tabbar) { animation: none; }
+/* La barra no se anima entre pantallas: solo cuenta la versión nueva (la vieja, con la lente a medias, se ocultaría encima) */
+::view-transition-old(tabbar) { display: none; }
+::view-transition-new(tabbar) { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
