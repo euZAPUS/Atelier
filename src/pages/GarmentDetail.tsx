@@ -77,11 +77,11 @@ export function GarmentDetail({ id }: { id: string }) {
   const isDefaultWash = g.washAfter === defaultWash(g.category, g.type)
   const setType = (type?: string) => {
     if (type === g.type) type = undefined // tocar el tipo activo lo quita
-    update(g.id, { type, ...(isDefaultWash ? { washAfter: defaultWash(g.category, type) } : {}) })
+    update(g.id, { type, review: false, ...(isDefaultWash ? { washAfter: defaultWash(g.category, type) } : {}) })
   }
   const setCategory = (c: CategoryId) => {
     if (c === g.category) return
-    update(g.id, { category: c, type: undefined, ...(isDefaultWash ? { washAfter: defaultWash(c) } : {}) })
+    update(g.id, { category: c, type: undefined, review: false, ...(isDefaultWash ? { washAfter: defaultWash(c) } : {}) })
   }
   const remove = async () => {
     if (!confirm(t.garment.confirmDelete)) return
@@ -126,6 +126,13 @@ export function GarmentDetail({ id }: { id: string }) {
       </div>
 
       <div className="page-in space-y-7 px-4 pt-5">
+        {g.review && status === 'ready' && (
+          <div className="card flex items-center gap-3 p-3">
+            <Icon name="sparkle" size={20} strokeWidth={1.7} className="shrink-0 text-worn" />
+            <span className="min-w-0 flex-1 text-[0.875rem]">{fmt(t.bulk.confirm, { cat: (g.type ? typeLabel(g.category, g.type, lang) : t.categories[g.category]).toLowerCase() })}</span>
+            <button onClick={() => { update(g.id, { review: false }); toast(t.bulk.confirmed) }} className="press h-9 shrink-0 rounded-full bg-accent px-4 text-[0.875rem] font-semibold text-accent-ink">{t.bulk.yes}</button>
+          </div>
+        )}
         <div>
           <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.02em]">{displayName(g, lang)}</h1>
           <p className="mt-1 text-[0.9375rem] text-muted">{subtitle}</p>

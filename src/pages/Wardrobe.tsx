@@ -9,6 +9,7 @@ import { garmentStatus } from '../domain/wash'
 import { CaptureInput } from '../features/capture/CaptureInput'
 import { GarmentCard } from '../features/wardrobe/GarmentCard'
 import { fmt, useT } from '../i18n'
+import { useQueue } from '../features/capture/store'
 import { backupDue } from '../lib/backup'
 import { TLink } from '../lib/nav'
 import { useSettings } from '../lib/settings'
@@ -39,6 +40,8 @@ export function Wardrobe() {
   const [color, setColor] = useState<string | null>(null)
   const [status, setStatus] = useState<GarmentStatus | null>(null)
   const [q, setQ] = useState('')
+  const [review, setReview] = useState(false)
+  const queue = useQueue()
 
   const garments = all ?? []
   const byCat = useMemo(() => new Set(garments.map((g) => g.category)), [garments])
@@ -50,9 +53,10 @@ export function Wardrobe() {
   const statuses = useMemo(() => garments.map(garmentStatus), [garments])
   const query = norm(q.trim())
   const shown = garments.filter((g, i) =>
-    (!cat || g.category === cat) && (!type || g.type === type) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
+    (!review || g.review) && (!cat || g.category === cat) && (!type || g.type === type) && (!color || g.color.name === color) && (!status || statuses[i] === status) &&
     (!query || norm(`${displayName(g, lang)} ${g.brand ?? ''} ${g.subcategory ?? ''} ${g.type ? typeLabel(g.category, g.type, lang) : ''} ${t.categories[g.category]} ${colorLabel(g.color.name, lang)}`).includes(query)))
-  const filtered = cat || type || color || status || query
+  const filtered = review || cat || type || color || status || query
+  const reviewCount = garments.filter((g) => g.review).length
   const dirtyList = garments.filter((_, i) => statuses[i] === 'dirty')
   const dirtyCount = dirtyList.length
   const dirtyNames = dirtyList.slice(0, 3).map((g) => displayName(g, lang)).join(', ') + (dirtyCount > 3 ? '…' : '')
@@ -81,6 +85,28 @@ export function Wardrobe() {
         </section>
       ) : (
         <>
+          {queue.total > 0 && queue.done < queue.total && (
+            <div className="page-in px-4 pb-3">
+              <div className="card flex items-center gap-3 p-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-surface-2"><Icon name="sparkle" size={21} strokeWidth={1.7} className="pulse-dot" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[0.9375rem] font-semibold">{fmt(t.bulk.progress, { done: Math.min(queue.done + 1, queue.total), total: queue.total })}</span>
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-surface-2">
+                    <span className="block h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${(queue.done / queue.total) * 100}%` }} />
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+          {reviewCount > 0 && !(queue.total > 0 && queue.done < queue.total) && (
+            <div className="page-in px-4 pb-3">
+              <button onClick={() => setReview(!review)} className="card press flex w-full items-center gap-3 p-3 text-left">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[12px] bg-worn/15 text-worn"><Icon name="sparkle" size={21} strokeWidth={1.7} /></span>
+                <span className="min-w-0 flex-1 text-[0.9375rem] font-semibold">{reviewCount === 1 ? t.bulk.reviewOne : fmt(t.bulk.review, { n: reviewCount })}</span>
+                <span className={`shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold ${review ? 'bg-surface-2' : 'bg-accent text-accent-ink'}`}>{review ? t.common.close : t.bulk.reviewCta}</span>
+              </button>
+            </div>
+          )}
           {backupDue(garments.length) && (
             <div className="page-in px-4 pb-3">
               <TLink href="/ajustes" className="press flex items-center gap-2.5 rounded-[14px] border border-line px-3 py-2.5 text-[0.875rem]">
@@ -138,7 +164,7 @@ export function Wardrobe() {
           ) : filtered && (
             <div className="page-in px-4 pt-12 text-center">
               <p className="text-lg font-semibold">{t.wardrobe.noMatch}</p>
-              <button className="press mt-2 text-[0.9375rem] font-medium text-muted underline" onClick={() => { setCat(null); setColor(null); setStatus(null); setQ('') }}>{t.wardrobe.clearFilters}</button>
+              <button className="press mt-2 text-[0.9375rem] font-medium text-muted underline" onClick={() => { setCat(null); setColor(null); setStatus(null); setQ(''); setReview(false) }}>{t.wardrobe.clearFilters}</button>
             </div>
           )}
         </>

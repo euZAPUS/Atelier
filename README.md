@@ -55,6 +55,13 @@ También acepta fotos de la galería y recortes pegados: si copias una prenda co
 
 El modelo se sirve desde la propia app, no desde el CDN de IMG.LY. No está en git: `npm run fetch-model` lo descarga del paquete oficial y copia solo lo que se usa. La primera vez se descarga una sola vez (unos 110 MB con WebGPU) y el service worker lo guarda para usarlo sin conexión.
 
+## Subida en bloque
+
+En *Añadir → Galería* puedes elegir **varias fotos a la vez**. Vuelves al armario al momento y:
+- cada foto se guarda enseguida como prenda «en proceso» (con su original), así que si cierras la app no se pierde nada: se retoma al abrirla;
+- se procesan **de una en una** en segundo plano (IA si hay cuota; si no, recorte en el móvil) con una barra «Añadiendo 3 de 10»;
+- la categoría y el tipo los pone la IA y la prenda queda **Por revisar**: en su ficha, «¿Es correcto? Sí», o cambias la categoría. El aviso del armario filtra las que faltan.
+
 ## Outfits (fase 3)
 
 - **Nuevo outfit** → **Añadir**: hoja con tu armario por categorías. Tocar añade o quita. Si un color chocaría con lo que ya llevas, la prenda sale marcada («choca con rojo»), y las sucias también.

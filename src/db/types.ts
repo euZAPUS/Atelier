@@ -32,6 +32,8 @@ export interface Garment {
   createdAt: number
   updatedAt: number
   archived: boolean
+  /** Subida en bloque: la categoría la puso la IA y falta que la confirmes */
+  review?: boolean
 }
 
 // Imágenes aparte para que la cuadrícula solo cargue miniaturas.

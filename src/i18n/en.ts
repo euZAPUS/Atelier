@@ -52,6 +52,11 @@ export const en: Dict = {
     uses: '{n} of {max} wears', cta: 'They are clean ({n})', done: '{n} items clean', doneOne: '1 item clean',
     empty: 'Nothing to wash', emptyBody: 'Your whole wardrobe is clean.', banner: '{n} items to wash', bannerOne: '1 item to wash', bannerCta: 'Washer',
   },
+  bulk: {
+    started: '{n} pieces on the way: they process on their own while you use the app', progress: 'Adding {done} of {total}', progressHint: 'You can keep using the app',
+    review: '{n} pieces to review', reviewOne: '1 piece to review', reviewCta: 'Review', reviewTag: 'Review',
+    confirm: 'The AI put it in {cat}. Is that right?', yes: 'Yes', confirmed: 'Confirmed', galleryHint: 'You can pick several at once',
+  },
   outfits: {
     title: 'Outfits', new: 'New outfit', untitled: 'Outfit {n}', pieces: '{n} pieces', piecesOne: '1 piece',
     emptyTitle: 'Build your first outfit', emptyBody: 'Pick pieces from your wardrobe and lay them out as if on your bed.', emptyNoClothes: 'Add some clothes to your wardrobe first.',

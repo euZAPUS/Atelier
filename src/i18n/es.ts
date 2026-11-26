@@ -50,6 +50,11 @@ export const es = {
     uses: '{n} de {max} usos', cta: 'Ya están limpias ({n})', done: '{n} prendas limpias', doneOne: '1 prenda limpia',
     empty: 'Nada que lavar', emptyBody: 'Todo tu armario está limpio.', banner: '{n} prendas para lavar', bannerOne: '1 prenda para lavar', bannerCta: 'Lavadora',
   },
+  bulk: {
+    started: '{n} prendas en camino: se procesan solas mientras usas la app', progress: 'Añadiendo {done} de {total}', progressHint: 'Puedes seguir usando la app',
+    review: '{n} prendas por revisar', reviewOne: '1 prenda por revisar', reviewCta: 'Revisar', reviewTag: 'Revisar',
+    confirm: 'La IA la ha puesto en {cat}. ¿Es correcto?', yes: 'Sí', confirmed: 'Confirmada', galleryHint: 'Puedes elegir varias a la vez',
+  },
   outfits: {
     title: 'Outfits', new: 'Nuevo outfit', untitled: 'Outfit {n}', pieces: '{n} prendas', piecesOne: '1 prenda',
     emptyTitle: 'Monta tu primer outfit', emptyBody: 'Elige prendas de tu armario y colócalas como si las extendieras en la cama.', emptyNoClothes: 'Primero añade alguna prenda a tu armario.',

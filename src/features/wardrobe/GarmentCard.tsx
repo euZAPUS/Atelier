@@ -22,6 +22,7 @@ export function GarmentCard({ g, index }: { g: Garment; index: number }) {
           <img src={url} alt="" loading="lazy" decoding="async" style={{ viewTransitionName: `g-${g.id}` }}
             className={`absolute inset-0 size-full ${isCutout ? 'product-shadow object-contain p-[12%]' : 'object-cover'} ${pending ? 'opacity-70' : ''}`} />
         )}
+        {!pending && g.review && <span className="absolute top-2 left-2 rounded-full bg-worn px-2 py-0.5 text-[0.6875rem] font-semibold text-black">{t.bulk.reviewTag}</span>}
         {pending && <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[0.6875rem] font-medium text-white backdrop-blur">{t.wardrobe.processing}</span>}
       </div>
       <p className="mt-2 truncate px-0.5 text-[0.9375rem] font-medium">{displayName(g, lang)}</p>

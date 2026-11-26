@@ -56,7 +56,7 @@ function Intro() {
             <Icon name="paste" size={19} strokeWidth={1.8} />{t.capture.paste}
           </button>
         </div>
-        <p className="pt-1 text-center text-[0.8125rem] leading-relaxed text-muted">{pasteMsg ?? t.capture.pasteHint}</p>
+        <p className="pt-1 text-center text-[0.8125rem] leading-relaxed text-muted">{pasteMsg ?? <>{t.bulk.galleryHint}. {t.capture.pasteHint}</>}</p>
       </div>
     </div>
   )

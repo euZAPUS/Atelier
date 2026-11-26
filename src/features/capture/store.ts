@@ -267,9 +267,15 @@ export async function reprocess(garmentId: string): Promise<{ ok: boolean; aiFal
   const before = img.status
   await db.images.update(img.id, { status: 'pending' })
   try {
-    const r = await process(source, undefined, g.category)
+    const r = await process(source, undefined, g.review ? undefined : g.category)
     await db.images.put({ id: img.id, cutout: r.cutout, thumb: r.thumb, original: r.original, status: 'ready' })
-    await db.garments.update(g.id, { color: r.color, palette: r.palette, updatedAt: Date.now() })
+    // Subida en bloque: la categoría y el tipo los pone la IA (y la prenda queda "por revisar")
+    const cat = g.review && r.suggested ? r.suggested : g.category
+    const type = g.review && r.suggested ? (typeById(r.suggested, r.suggestedType) ? r.suggestedType : undefined) : g.type
+    await db.garments.update(g.id, {
+      color: r.color, palette: r.palette, updatedAt: Date.now(),
+      ...(g.review && r.suggested ? { category: cat, type, washAfter: defaultWash(cat, type) } : {}),
+    })
     return { ok: true, aiFallback: r.aiFallback }
   } catch (e) {
     console.error(e)
@@ -278,10 +284,65 @@ export async function reprocess(garmentId: string): Promise<{ ok: boolean; aiFal
   }
 }
 
+// ── Cola en segundo plano (subida en bloque y prendas a medias): de una en una, para no gastar la cuota de golpe
+const queue: string[] = []
+const inQueue = new Set<string>()
+let running = false
+let progress = { total: 0, done: 0 }
+const qsubs = new Set<() => void>()
+const qemit = () => { progress = { ...progress }; qsubs.forEach((f) => f()) }
+export function useQueue() {
+  return useSyncExternalStore((f) => { qsubs.add(f); return () => { qsubs.delete(f) } }, () => progress)
+}
+export function enqueue(ids: string[]) {
+  const fresh = ids.filter((id) => !inQueue.has(id))
+  if (!fresh.length) return
+  if (!running) progress = { total: 0, done: 0 }
+  fresh.forEach((id) => { inQueue.add(id); queue.push(id) })
+  progress.total += fresh.length
+  qemit()
+  if (!running) void run()
+}
+async function run() {
+  running = true
+  while (queue.length) {
+    const id = queue.shift()!
+    try { await reprocess(id) } catch (e) { console.error(e) }
+    inQueue.delete(id)
+    progress.done++
+    qemit()
+  }
+  running = false
+}
+
+/** Subida en bloque: cada foto se guarda al momento como prenda "en proceso" (con su original) y entra en la cola. */
+export async function startBulk(files: File[]): Promise<number> {
+  const ids: string[] = []
+  for (const file of files) {
+    try {
+      const bmp = await decode(file)
+      const c = toCanvas(bmp, 1600); bmp.close()
+      const original = await canvasToBlob(c, 'image/jpeg', 0.85)
+      const thumb = await canvasToBlob(toCanvas(c, 360), 'image/jpeg', 0.75)
+      const now = Date.now(), gid = newId(), imageId = newId()
+      await db.transaction('rw', db.garments, db.images, async () => {
+        await db.images.put({ id: imageId, cutout: null, thumb, original, status: 'pending' })
+        await db.garments.add({
+          id: gid, name: '', category: 'tshirts', color: PENDING_COLOR, palette: [], imageId,
+          washAfter: defaultWash('tshirts'), wearsSinceWash: 0, wearsTotal: 0, createdAt: now + ids.length, updatedAt: now, archived: false, review: true,
+        })
+      })
+      ids.push(gid)
+    } catch (e) { console.error('foto no válida', e) }
+  }
+  enqueue(ids)
+  return ids.length
+}
+
 /** Al abrir la app: las prendas que se quedaron a medias se procesan de nuevo. */
 export async function resumePending() {
   const pending = await db.images.where('status').equals('pending').primaryKeys()
   if (!pending.length) return
   const garments = await db.garments.where('imageId').anyOf(pending as string[]).toArray().catch(() => [])
-  for (const g of garments) await reprocess(g.id)
+  enqueue(garments.map((g) => g.id))
 }
