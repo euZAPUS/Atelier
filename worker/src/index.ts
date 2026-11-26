@@ -112,10 +112,53 @@ Look carefully at how long the sleeves are before choosing the type, and mention
     }
     if (category && type && !(TYPES[category] as readonly string[]).includes(type)) type = undefined
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
-    return { category, type, description: (parsed.description ?? '').slice(0, 160), colors, rotation, sideways, raw: text.slice(0, 400) }
+    let description = (parsed.description ?? '').slice(0, 160)
+    // Prendas de arriba: una pregunta corta y concreta sobre mangas y cuello (el modelo acierta más que en la pregunta larga)
+    if (!sideways && category && ['tshirts', 'polos', 'shirts'].includes(category)) {
+      const top = await askTop(env, dataUrl, vmodel).catch(() => null)
+      if (top) {
+        const t = refineTop(category, type, description, top)
+        category = t.category; type = t.type; description = t.description
+      }
+    }
+    return { category, type, description, colors, rotation, sideways, raw: text.slice(0, 400) }
   } catch {
     return { category: null, description: '', colors: [], rotation: 0 }
   }
+}
+
+type Top = { sleeves: 'short' | 'long' | 'none' | null; collar: string; buttons: string }
+async function askTop(env: Env, dataUrl: string, vmodel?: string): Promise<Top> {
+  const prompt = `Look only at the main top garment in the photo. Answer ONLY with JSON: {"sleeves": "short" (they end above the elbow) or "long" (they reach the wrist) or "none", "collar": "round" or "v-neck" or "polo collar" or "shirt collar" or "hood", "buttons": "none" or "few" (2-3 at the neck) or "full" (all the way down) or "zip"}`
+  const out = (await env.AI.run((vmodel || VISION) as typeof VISION, {
+    messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }],
+    max_tokens: 80, temperature: 0,
+  } as never)) as { response?: string | object; choices?: { message?: { content?: string } }[] }
+  let text = typeof out.response === 'object' && out.response ? JSON.stringify(out.response) : (out.response as string | undefined) ?? out.choices?.[0]?.message?.content ?? ''
+  text = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)
+  const j = JSON.parse(text) as Record<string, unknown>
+  const sl = String(j.sleeves ?? '').toLowerCase()
+  return {
+    sleeves: sl.startsWith('short') ? 'short' : sl.startsWith('long') ? 'long' : sl.startsWith('none') ? 'none' : null,
+    collar: String(j.collar ?? '').toLowerCase(), buttons: String(j.buttons ?? '').toLowerCase(),
+  }
+}
+
+/** Ajusta categoría, tipo y descripción de una prenda de arriba con la respuesta concreta de mangas y cuello. */
+export function refineTop(category: Category, type: string | undefined, description: string, top: Top) {
+  let cat: Category = category
+  if (top.buttons.startsWith('full') || top.buttons.startsWith('zip')) cat = top.collar.includes('shirt') || top.collar.includes('polo') ? 'shirts' : cat
+  else if (top.collar.includes('polo') || (top.collar.includes('collar') && top.buttons.startsWith('few'))) cat = 'polos'
+  else if (cat === 'shirts') cat = 'tshirts'
+  const long = top.sleeves === 'long'
+  let t = type
+  if (cat === 'tshirts') t = top.sleeves === 'none' ? 'tank' : long ? 'longsleeve' : 'tee'
+  else if (cat === 'polos') t = long ? 'longpolo' : 'polo'
+  else if (cat === 'shirts' && !t) t = 'shirt'
+  // La descripción (que va al generador de imagen) dice el largo correcto
+  let d = description.replace(/\b(long|short)[- ]?sleeves?d?\b,?\s*/gi, '').replace(/\blongsleeve\b\s*/gi, '')
+  if (top.sleeves === 'short' || top.sleeves === 'long') d = `${d.replace(/[.\s]+$/, '')}, ${top.sleeves} sleeves`
+  return { category: cat, type: t, description: d.slice(0, 160) }
 }
 
 /**
