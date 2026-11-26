@@ -188,7 +188,7 @@ export function OutfitEditor({ id }: { id: string }) {
       </div>
 
       <div className="px-4 pt-3">
-        <div ref={canvas} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+        <div ref={canvas} data-no-edge-swipe onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
           className="relative mx-auto aspect-[3/4] max-w-full touch-none overflow-hidden rounded-[22px] border border-line bg-tile select-none"
           // Alto que cabe en pantalla junto a la cabecera y los botones; el ancho sale de la proporción 3:4
           style={{ height: 'min(calc(100dvh - 300px - env(safe-area-inset-top) - env(safe-area-inset-bottom)), calc((100vw - 32px) * 4 / 3))' }}>

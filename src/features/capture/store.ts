@@ -333,9 +333,9 @@ export async function startBulk(files: File[]): Promise<number> {
         })
       })
       ids.push(gid)
+      enqueue([gid]) // empieza a procesarse ya, mientras se guardan las demás
     } catch (e) { console.error('foto no válida', e) }
   }
-  enqueue(ids)
   return ids.length
 }
 

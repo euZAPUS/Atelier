@@ -26,8 +26,8 @@ export function CaptureInput({ children, className = '', source = 'camera', aria
           // Varias fotos de la galería: subida en bloque, se procesan solas mientras usas la app
           if (files.length > 1) {
             go('/', { replace: true })
-            const n = await startBulk(files)
-            toast(fmt(t.bulk.started, { n }))
+            toast(fmt(t.bulk.started, { n: files.length }))
+            await startBulk(files)
             return
           }
           startCapture(file)

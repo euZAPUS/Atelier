@@ -28,6 +28,7 @@ export function useEdgeSwipeBack(ref: RefObject<HTMLElement | null>, enabled: bo
     const kick = () => { if (!raf) raf = requestAnimationFrame(loop) }
     const down = (e: PointerEvent) => {
       if (e.clientX > EDGE || e.pointerType === 'mouse' && e.button !== 0) return
+      if ((e.target as Element | null)?.closest?.('[data-no-edge-swipe]')) return // p. ej. el lienzo del editor de outfits
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, locked: null, lastX: e.clientX, lastT: performance.now(), v: 0 }
     }
     const move = (e: PointerEvent) => {
