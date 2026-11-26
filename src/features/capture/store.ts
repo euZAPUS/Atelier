@@ -100,6 +100,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
   } else if (await aiConfig()) {
     onPhase({ phase: 'ai' })
     let src = full
+    let known: Awaited<ReturnType<typeof aiIdentify>> | null = null // lo que ya sabemos aunque falle la imagen
     try {
       // 1. Qué prenda es y si la foto está girada (rápido)
       const ask = (c: HTMLCanvasElement) => canvasToBlob(toCanvas(c, 768), 'image/jpeg', 0.85).then((b) => aiIdentify(b, hint)).catch((e) => {
@@ -121,6 +122,7 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
         src = rotateCanvas(full, rotation) // la prenda, derecha (cuello arriba)
         original = await canvasToBlob(src, 'image/jpeg', 0.82)
       }
+      known = id
       if (id?.category) onPhase({ phase: 'ai', suggested: id.category, suggestedType: id.type })
       // 2. Foto de producto sobre fondo neutro
       const ai = await productShot(await canvasToBlob(toCanvas(src, 1024), 'image/jpeg', 0.9), hint, id)
@@ -136,7 +138,9 @@ async function process(file: Blob, onPhase: Phase = () => {}, hint?: CategoryId)
     } catch (e) {
       aiFallback = e instanceof AiError ? e.kind : 'failed'
       console.warn('IA no disponible, recorte local:', e)
-      onPhase({ phase: 'cutout', aiFallback })
+      // Si la identificación sí funcionó (p. ej. el filtro del generador bloqueó la imagen), se conserva
+      if (known?.category) { suggested = known.category; suggestedType = known.type; words = known.colors }
+      onPhase({ phase: 'cutout', aiFallback, suggested, suggestedType })
       cut = await cutLocal(src)
     }
   } else {
