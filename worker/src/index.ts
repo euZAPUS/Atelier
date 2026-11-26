@@ -66,7 +66,12 @@ For colours use simple names such as: black, charcoal, grey, light grey, white, 
 Describe only what you can actually see. Do not say "hoodie" unless a hood is clearly visible. The photo may be rotated or the garment may be folded.
 Categories and their types (category: type ids):
 ${Object.entries(TYPES).map(([c, t]) => `${c}: ${t.join(', ')}`).join('\n')}
-Guide: polos have a collar with buttons and short or long sleeves in piqué; shirts are woven with full button front; hoodies covers sweatshirts, hoodies, thick collared rugby sweatshirts (type rugby) and knit sweaters; tracksuits are sports track pants/jackets; trousers are jeans, chinos, cargo, shorts; headwear is caps and hats; accessories are bags, backpacks, belts, glasses, socks, etc.`
+Type guide:
+- tee = T-shirt with SHORT sleeves (they end above the elbow). Most T-shirts are tees. longsleeve = T-shirt whose sleeves reach the wrists. tank = no sleeves.
+- polos: a collar with a short button placket (2-3 buttons) or a collared football/sports jersey. shirts: ONLY woven shirts that open with buttons or a zip ALL the way down the front.
+- hoodies: sweatshirts (thick fleece, ribbed cuffs and hem), hoodies, rugby sweatshirts, knit sweaters. jackets: anything worn over other clothes with a full zip (bomber, windbreaker, puffer, coat).
+- tracksuits: sports track pants/jackets. trousers: jeans, chinos, cargo, shorts. headwear: caps and hats. accessories: bags, backpacks, belts, glasses, socks, etc.
+Look carefully at how long the sleeves are before choosing the type, and mention "short sleeves" or "long sleeves" in the description.`
   // Imagen como data URL dentro del mensaje (formato de chat con imagen)
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
@@ -95,6 +100,15 @@ Guide: polos have a collar with buttons and short or long sleeves in piqué; shi
     if (category === 'tshirts' && /\b(sweatshirt|sweater|jumper|hoodie|rugby|fleece|knit|crewneck)\b/i.test(desc)) {
       category = 'hoodies'
       type = /rugby/i.test(desc) || /collar/i.test(desc) ? 'rugby' : /hood/i.test(desc) ? 'hoodie' : /knit|sweater|jumper/i.test(desc) ? 'sweater' : 'sweatshirt'
+    }
+    // Manga: si la descripción dice manga corta, manda la descripción (el modelo a veces marca "longsleeve" igualmente)
+    if (category === 'tshirts' && /short[- ]?sleeve/i.test(desc)) type = 'tee'
+    if (category === 'polos' && /short[- ]?sleeve/i.test(desc)) type = 'polo'
+    // "Camisa" sin botonadura ni cremallera no es camisa: con cuello → polo; si no, camiseta (o sudadera si lo parece)
+    if (category === 'shirts' && !/\b(button|buttons|buttoned|placket|zip|zipper|linen|flannel|denim|oxford|overshirt|camp|bowling|work shirt|plaid|check)/i.test(desc)) {
+      if (/\b(sweatshirt|fleece|crewneck|jumper)\b/i.test(desc)) { category = 'hoodies'; type = 'sweatshirt' }
+      else if (/collar|jersey/i.test(desc)) { category = 'polos'; type = /long[- ]?sleeve/i.test(desc) ? 'longpolo' : 'polo' }
+      else { category = 'tshirts'; type = /long[- ]?sleeve/i.test(desc) && !/short[- ]?sleeve/i.test(desc) ? 'longsleeve' : 'tee' }
     }
     if (category && type && !(TYPES[category] as readonly string[]).includes(type)) type = undefined
     const colors = Array.isArray(parsed.colors) ? parsed.colors.filter((c): c is string => typeof c === 'string').slice(0, 4).map((c) => c.toLowerCase().slice(0, 24)) : []
