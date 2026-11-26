@@ -198,7 +198,6 @@ nav.tabbar { view-transition-name: tabbar; }
 /* ---------- Barra de pestañas: píldora y lente (ver ui/TabBar.tsx) ---------- */
 .tab-pill {
   transform-origin: center;
-  will-change: transform;
   background: color-mix(in srgb, var(--ink) 9%, transparent);
   transition: background-color .25s, box-shadow .25s, border-color .25s;
   border: 1px solid transparent;
@@ -213,8 +212,6 @@ nav.tabbar { view-transition-name: tabbar; }
     inset 0 1px 1px rgb(255 255 255 / .55),
     inset 0 -1px 1px rgb(255 255 255 / .12),
     0 8px 24px -6px rgb(0 0 0 / .45);
-  -webkit-backdrop-filter: blur(2px) saturate(1.8) brightness(1.08);
-  backdrop-filter: blur(2px) saturate(1.8) brightness(1.08);
 }
 
 /* Botón "+": se hunde al pulsar y vuelve con rebote */

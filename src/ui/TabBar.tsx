@@ -65,9 +65,24 @@ export function TabBar() {
     const moving = [a.x.step(dt), a.lens.step(dt), a.stretch.step(dt)].some(Boolean)
     paint()
     a.raf = moving || gesture.current ? requestAnimationFrame(loop) : 0
-    if (!a.raf) a.last = 0
+    if (!a.raf) { a.last = 0; settle() }
   }
-  const kick = () => { if (!anim.current.raf) anim.current.raf = requestAnimationFrame(loop) }
+  // Al terminar: valores exactos, fuera las capas de animación y un repintado forzado. Safari en iOS deja
+  // restos de la lente (lo que pintó fuera de la barra) si no se le obliga a repintar.
+  const settle = () => {
+    const pill = pillRef.current, bar = barRef.current
+    if (!pill || !bar) return
+    pill.style.willChange = 'auto'
+    itemRefs.current.forEach((el) => { if (el) { el.style.transform = ''; el.style.willChange = 'auto' } })
+    bar.style.transform = 'translateZ(0)'
+    requestAnimationFrame(() => { bar.style.transform = '' })
+  }
+  const kick = () => {
+    if (anim.current.raf) return
+    pillRef.current?.style.setProperty('will-change', 'transform')
+    itemRefs.current.forEach((el) => el?.style.setProperty('will-change', 'transform'))
+    anim.current.raf = requestAnimationFrame(loop)
+  }
 
   // Al cambiar de pantalla (por un enlace, atrás…), la píldora va con muelle a su pestaña
   useEffect(() => {
@@ -150,7 +165,7 @@ export function TabBar() {
                 draggable={false} onDragStart={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}
                 style={{ WebkitTouchCallout: 'none', WebkitUserDrag: 'none' } as React.CSSProperties}
                 className={`relative z-10 flex h-full flex-1 flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${i === active ? 'text-ink' : 'text-muted'}`}>
-                <span ref={(el) => { itemRefs.current[i] = el }} className="flex flex-col items-center gap-0.5 will-change-transform">
+                <span ref={(el) => { itemRefs.current[i] = el }} className="flex flex-col items-center gap-0.5">
                   <Icon name={tab.icon} size={23} strokeWidth={i === active ? 1.9 : 1.6} />
                   <span className={`text-[0.625rem] ${i === active ? 'font-semibold' : 'font-medium'}`}>{tab.label}</span>
                 </span>
