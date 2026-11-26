@@ -7,6 +7,7 @@ import { defaultWash, typeById, type CategoryId } from '../../domain/categories'
 import { extractPalette, nameWithWords } from '../../domain/color'
 import { AiError, aiConfig, aiIdentify, productShot } from '../../lib/ai'
 import { removeBackground, warmUp } from '../../lib/bg'
+import { keepMainBlob } from '../../lib/mask'
 import { keyOut } from '../../lib/chroma'
 import { ROTS, voteRotation } from '../../lib/orientation'
 import { canvasToBlob, centerCrop, decode, encodeAlpha, hasTransparency, rotateCanvas, samplePixels, toCanvas, trimTransparent } from '../../lib/image'
@@ -65,7 +66,14 @@ async function segment(src: HTMLCanvasElement) {
 
 /** Recorte local listo para guardar. */
 async function cutLocal(src: HTMLCanvasElement) {
-  return trimTransparent((await segment(src)).cut)
+  const { cut } = await segment(src)
+  // Solo la mancha principal: fuera chanclas, manos o trozos de cama que el modelo haya dejado sueltos
+  const ctx = cut.getContext('2d', { willReadFrequently: true })!
+  const img = ctx.getImageData(0, 0, cut.width, cut.height)
+  const before = img.data.slice()
+  const removed = keepMainBlob(img.data, cut.width, cut.height)
+  ctx.putImageData(removed > 0.5 ? new ImageData(before, cut.width, cut.height) : img, 0, 0) // si se llevara medio recorte, algo raro pasa
+  return trimTransparent(cut)
 }
 
 /** Recorte del fondo liso de la imagen de la IA. null si el resultado no es creíble (se usa el recorte local). */
