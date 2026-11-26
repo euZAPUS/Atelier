@@ -14,6 +14,7 @@ export const es = {
     emptyCta: 'Añadir la primera prenda',
     noMatch: 'Nada con estos filtros', clearFilters: 'Quitar filtros',
     processing: 'Recortando',
+    backupHint: 'Haz una copia de seguridad: si iOS borra los datos, la necesitarás',
   },
   capture: {
     title: 'Añadir prenda', pill: 'Nueva prenda', camera: 'Hacer foto',

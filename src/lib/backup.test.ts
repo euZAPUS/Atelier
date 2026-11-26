@@ -26,3 +26,12 @@ it('rechaza archivos que no son copias', async () => {
   await expect(readBackup(new Blob(['{"hola":1}']))).rejects.toBeInstanceOf(BackupError)
   await expect(readBackup(new Blob(['no es json']))).rejects.toBeInstanceOf(BackupError)
 })
+
+it('recordatorio de copia', async () => {
+  const { backupDue } = await import('./backup')
+  const now = Date.parse('2026-11-26T12:00:00Z')
+  expect(backupDue(3, null, now)).toBe(false) // pocas prendas
+  expect(backupDue(5, null, now)).toBe(true) // nunca
+  expect(backupDue(5, '2026-11-20T12:00:00Z', now)).toBe(false)
+  expect(backupDue(5, '2026-11-01T12:00:00Z', now)).toBe(true)
+})

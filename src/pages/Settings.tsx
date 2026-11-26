@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { db } from '../db/db'
-import { BackupError, exportBackup, readBackup, restoreBackup, saveBackup, type BackupFile } from '../lib/backup'
+import { BackupError, LAST_BACKUP, exportBackup, readBackup, restoreBackup, saveBackup, type BackupFile } from '../lib/backup'
 import { toast } from '../ui/Toast'
 import { fmt, useT } from '../i18n'
 import { aiPing, DEFAULT_AI_URL } from '../lib/ai'
@@ -105,7 +105,6 @@ function CutoutSection() {
   )
 }
 
-const LAST_BACKUP = 'atelier:lastBackup'
 function BackupSection() {
   const t = useT()
   const { lang } = useSettings()

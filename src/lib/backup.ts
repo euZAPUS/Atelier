@@ -82,3 +82,9 @@ export async function saveBackup(blob: Blob) {
   setTimeout(() => URL.revokeObjectURL(url), 5000)
   return 'downloaded' as const
 }
+
+export const LAST_BACKUP = 'atelier:lastBackup'
+export const lastBackup = () => { try { return localStorage.getItem(LAST_BACKUP) } catch { return null } }
+/** ¿Toca recordar la copia? Con 5 prendas o más y sin copia en 14 días. */
+export const backupDue = (garments: number, last = lastBackup(), now = Date.now()) =>
+  garments >= 5 && (!last || now - Date.parse(last) > 14 * 86_400_000)

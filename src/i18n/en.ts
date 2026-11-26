@@ -16,6 +16,7 @@ export const en: Dict = {
     emptyCta: 'Add your first item',
     noMatch: 'Nothing matches these filters', clearFilters: 'Clear filters',
     processing: 'Cutting out',
+    backupHint: 'Make a backup: if iOS clears the data, you will need it',
   },
   capture: {
     title: 'Add item', pill: 'New item', camera: 'Take photo',
