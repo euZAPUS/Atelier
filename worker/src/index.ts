@@ -132,7 +132,10 @@ function pickKey(colors: string[], description: string): { hex: string; name: st
 }
 
 /** Largo de manga según el catálogo (más fiable que lo que ve el modelo con las mangas dobladas). */
-function sleeveHint(category: Category | null, type?: string): string {
+function sleeveHint(category: Category | null, type?: string, description = ''): string {
+  // Primero lo que el modelo ha visto (se le pide que lo diga); el catálogo solo si no lo dice
+  if (/short[- ]?sleeve/i.test(description)) return 'short sleeves'
+  if (/long[- ]?sleeve/i.test(description)) return 'long sleeves'
   if (!category) return ''
   if (type === 'tank') return 'sleeveless'
   if (type === 'tee' || type === 'polo' || type === 'shorts') return type === 'shorts' ? '' : 'short sleeves'
@@ -148,9 +151,9 @@ function prompts(what: string, keyName: string): string[] {
   // prohibiendo copiar texturas del entorno e inventar logos o capuchas.
   return [
     `Turn this photo into a professional e-commerce product photo of the ${what}. Keep only that one garment and remove everything else: bed, sheets, blankets, bags, shoes, floor. ` +
-      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, sleeve length, colours, collar and stripes. ` +
+      `Lay it perfectly flat and unfolded, upright, front view, symmetrical, centered, whole garment visible. Keep its exact shape, sleeve length, colours, collar and stripes. Remove the hanger. ` +
       `Do not add logos, text, hoods or pockets. Do not copy patterns or textures from the surroundings onto the garment. Background: plain solid ${keyName}, evenly lit.`,
-    `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, same sleeve length, nothing added.`,
+    `The ${what} from the reference photo, isolated, upright, flat lay, front view, centered, on a plain ${keyName}. Exactly the same garment, same sleeve length, nothing added, no hanger.`,
     `${what}, front view, flat lay, centered, plain ${keyName} background`,
   ]
 }
@@ -225,7 +228,7 @@ export default {
         : await identify(env, bytes, hint).catch((e) => { visionError = String((e as Error)?.message ?? e).slice(0, 300); return fallbackId })
       const key = pickKey(id.colors, id.description)
       const debug = keyOk ? { prompt: (form.get('prompt') as string | null) ?? undefined, model: (form.get('model') as string | null) ?? undefined } : undefined
-      const shot = await productShot(env, image, id.description, key, debug, sleeveHint(id.category, id.type))
+      const shot = await productShot(env, image, id.description, key, debug, sleeveHint(id.category, id.type, id.description))
       return json({ image: shot.image, attempt: shot.attempt, key: key.hex, category: id.category, description: id.description, colors: id.colors, visionError }, 200, h)
     } catch (e) {
       const msg = String((e as Error)?.message ?? e)
